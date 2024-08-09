@@ -1,5 +1,10 @@
 pub enum Instruction {
-    ADD = 1,
+    BR = 0,
+    ADD,
+    LD,
+    ST,
+    JSR,
+    AND,
 }
 pub enum Register {
     R0 = 0,
@@ -52,6 +57,22 @@ impl LC3VirtualMachine {
                         + self.registers[source_two_register as usize];
                 }
             }
+            opcode if opcode == Instruction::AND as u16 => {
+                let destination_register = (instruction >> 9) & 0b111;
+                let source_one_register = (instruction >> 6) & 0b111;
+                let inmediate_return_flag = (instruction >> 5) & 0b1;
+
+                if inmediate_return_flag == 1 {
+                    let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
+                    self.registers[destination_register as usize] =
+                        self.registers[source_one_register as usize] & inmediate_value;
+                } else {
+                    let source_two_register = instruction & 0b111;
+                    self.registers[destination_register as usize] = self.registers
+                        [source_one_register as usize]
+                        & self.registers[source_two_register as usize];
+                }
+            }
             _ => {}
         }
     }
@@ -86,5 +107,31 @@ pub mod test {
         let result = virtual_machine.read_register(super::Register::R2);
 
         assert_eq!(result, 2);
+    }
+
+    #[test]
+    fn can_and_two_numbers_in_same_register() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_max_inmediate_value_to_register_zero = 0b0001000000111111;
+        let and_five_to_register_zero = 0b0101000000100101;
+        virtual_machine.process_input(add_max_inmediate_value_to_register_zero);
+        virtual_machine.process_input(and_five_to_register_zero);
+        let result = virtual_machine.read_register(super::Register::R0);
+
+        assert_eq!(result, 0b00101);
+    }
+
+    #[test]
+    fn can_and_two_numbers_in_differents_registers() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_max_inmediate_value_to_register_zero = 0b0001000000111111;
+        let add_five_to_regiser_one = 0b0001001001100101;
+        virtual_machine.process_input(add_max_inmediate_value_to_register_zero);
+        virtual_machine.process_input(add_five_to_regiser_one);
+        let and_register_zero_and_one_in_register_two = 0b0101010000000001;
+        virtual_machine.process_input(and_register_zero_and_one_in_register_two);
+        let result = virtual_machine.read_register(super::Register::R2);
+
+        assert_eq!(result, 0b00101);
     }
 }
