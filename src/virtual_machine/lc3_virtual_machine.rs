@@ -1,20 +1,31 @@
+use std::process::exit;
+
 pub enum Instruction {
-    BR = 0,
-    ADD,
-    LD,
-    ST,
+    BR = 0, // yes
+    ADD,    // yes
+    LD,     // yes
+    ST,     // yes
     JSR,
-    AND,
+    AND, // yes
     LDR,
     STR,
     RTI,
-    NOT,
+    NOT, // yes
     LDI,
     STI,
     JMP,
     RES,
     LEA,
     TRAP,
+}
+
+pub enum Trap {
+    GETC = 0x20,
+    OUT = 0x21,
+    PUTS = 0x22,
+    IN = 0x23,
+    PUTSP = 0x24,
+    HALT = 0x25,
 }
 
 pub enum Flags {
@@ -238,15 +249,17 @@ impl LC3VirtualMachine {
             opcode if opcode == Instruction::AND as u16 => self.and_instruction(instruction),
             opcode if opcode == Instruction::LDR as u16 => self.load_base_offset(instruction),
             opcode if opcode == Instruction::STR as u16 => self.store_base_offset(instruction),
-            opcode if opcode == Instruction::RTI as u16 => (),
             opcode if opcode == Instruction::NOT as u16 => self.not_instruction(instruction),
             opcode if opcode == Instruction::LDI as u16 => self.load_indirect(instruction),
             opcode if opcode == Instruction::STI as u16 => self.store_indirect(instruction),
             opcode if opcode == Instruction::JMP as u16 => self.jump(instruction),
-            opcode if opcode == Instruction::RES as u16 => (),
             opcode if opcode == Instruction::LEA as u16 => self.load_effective_address(instruction),
+            opcode if opcode == Instruction::RTI as u16 => (),
+            opcode if opcode == Instruction::RES as u16 => (),
             opcode if opcode == Instruction::TRAP as u16 => (),
-            _ => {}
+            _ => {
+                exit(-1);
+            }
         }
     }
     pub fn read_register(&self, register: Register) -> u16 {
@@ -377,5 +390,19 @@ pub mod test {
 
         let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b10);
+    }
+
+    #[test]
+    fn can_store_and_load_from_memory() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_five_to_regiser_zero = 0b0001000000100101;
+        virtual_machine.process_input(add_five_to_regiser_zero);
+        let store_register_zero_value_to_memory = 0b0011000000000001;
+        virtual_machine.process_input(store_register_zero_value_to_memory);
+        let load_value_from_memory_to_register_one = 0b0010001000000001;
+        virtual_machine.process_input(load_value_from_memory_to_register_one);
+
+        let result = virtual_machine.read_register(super::Register::R1);
+        assert_eq!(result, 0b101);
     }
 }
