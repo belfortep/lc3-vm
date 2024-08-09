@@ -125,18 +125,6 @@ impl LC3VirtualMachine {
         self.memory[memory_address as usize] = value_to_write;
     }
 
-    fn load_indirect(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-
-        let memory_address = self.memory_read(
-            self.registers[Register::ProgramCounter as usize] + programm_counter_offset,
-        );
-        self.registers[destination_register as usize] = self.memory_read(memory_address);
-
-        self.update_flags(destination_register);
-    }
-
     fn load(&mut self, instruction: u16) {
         let destination_register = (instruction >> 9) & 0b111;
         let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
@@ -146,6 +134,18 @@ impl LC3VirtualMachine {
         );
 
         self.registers[destination_register as usize] = result_value;
+        self.update_flags(destination_register);
+    }
+
+    fn load_indirect(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+
+        let memory_address = self.memory_read(
+            self.registers[Register::ProgramCounter as usize] + programm_counter_offset,
+        );
+        self.registers[destination_register as usize] = self.memory_read(memory_address);
+
         self.update_flags(destination_register);
     }
 
@@ -203,6 +203,30 @@ impl LC3VirtualMachine {
         self.memory_write(memory_address, value_to_write);
     }
 
+    fn store_indirect(&mut self, instruction: u16) {
+        let source_register = (instruction >> 9) & 0b111;
+        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+        let value_to_write = self.registers[source_register as usize];
+
+        let memory_address = self.memory_read(
+            self.registers[Register::ProgramCounter as usize] + programm_counter_offset,
+        );
+        let destination_address = self.memory_read(memory_address);
+
+        self.memory_write(destination_address, value_to_write)
+    }
+
+    fn store_base_offset(&mut self, instruction: u16) {
+        let source_register = (instruction >> 9) & 0b111;
+        let base_register = (instruction >> 6) & 0b111;
+        let offset = Self::sign_extend(instruction & 0b111111, 6);
+
+        let value_to_write = self.registers[source_register as usize];
+        let base_register_address = self.registers[base_register as usize];
+
+        self.memory_write(offset + base_register_address, value_to_write)
+    }
+
     pub fn process_input(&mut self, instruction: u16) {
         let opcode = instruction >> 12;
         match opcode {
@@ -213,11 +237,11 @@ impl LC3VirtualMachine {
             opcode if opcode == Instruction::JSR as u16 => self.jump_to_subroutine(instruction),
             opcode if opcode == Instruction::AND as u16 => self.and_instruction(instruction),
             opcode if opcode == Instruction::LDR as u16 => self.load_base_offset(instruction),
-            opcode if opcode == Instruction::STR as u16 => (),
+            opcode if opcode == Instruction::STR as u16 => self.store_base_offset(instruction),
             opcode if opcode == Instruction::RTI as u16 => (),
             opcode if opcode == Instruction::NOT as u16 => self.not_instruction(instruction),
             opcode if opcode == Instruction::LDI as u16 => self.load_indirect(instruction),
-            opcode if opcode == Instruction::STI as u16 => (),
+            opcode if opcode == Instruction::STI as u16 => self.store_indirect(instruction),
             opcode if opcode == Instruction::JMP as u16 => self.jump(instruction),
             opcode if opcode == Instruction::RES as u16 => (),
             opcode if opcode == Instruction::LEA as u16 => self.load_effective_address(instruction),
