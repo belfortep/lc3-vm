@@ -129,6 +129,40 @@ impl LC3VirtualMachine {
         self.update_flags(destination_register);
     }
 
+    fn load(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+
+        let result_value = self.memory_read(
+            self.registers[Register::ProgramCounter as usize] + programm_counter_offset,
+        );
+
+        self.registers[destination_register as usize] = result_value;
+        self.update_flags(destination_register);
+    }
+
+    fn load_base_offset(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let base_register = (instruction >> 6) & 0b111;
+        let offset = Self::sign_extend(instruction & 0b111111, 6);
+
+        let register_value = self.registers[base_register as usize];
+        let result_value = self.memory_read(register_value + offset);
+
+        self.registers[destination_register as usize] = result_value;
+        self.update_flags(destination_register);
+    }
+
+    fn load_effective_address(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+
+        self.registers[destination_register as usize] =
+            self.registers[Register::ProgramCounter as usize] + programm_counter_offset;
+
+        self.update_flags(destination_register);
+    }
+
     fn store(&mut self, instruction: u16) {
         let source_register = (instruction >> 9) & 0b111;
         let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
