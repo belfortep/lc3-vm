@@ -37,14 +37,19 @@ impl LC3VirtualMachine {
         let opcode = instruction >> 12;
         match opcode {
             opcode if opcode == Instruction::ADD as u16 => {
-                let first_register = (instruction >> 9) & 0b111;
-                let second_register = (instruction >> 6) & 0b111;
+                let destination_register = (instruction >> 9) & 0b111;
+                let source_one_register = (instruction >> 6) & 0b111;
                 let inmediate_return_flag = (instruction >> 5) & 0b1;
 
                 if inmediate_return_flag == 1 {
                     let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
-                    self.registers[first_register as usize] =
-                        self.registers[second_register as usize] + inmediate_value;
+                    self.registers[destination_register as usize] =
+                        self.registers[source_one_register as usize] + inmediate_value;
+                } else {
+                    let source_two_register = instruction & 0b111;
+                    self.registers[destination_register as usize] = self.registers
+                        [source_one_register as usize]
+                        + self.registers[source_two_register as usize];
                 }
             }
             _ => {}
@@ -60,12 +65,26 @@ pub mod test {
     use super::LC3VirtualMachine;
 
     #[test]
-    fn can_add_two_numbers() {
+    fn can_add_two_numbers_in_same_register() {
         let mut virtual_machine = LC3VirtualMachine::new();
         let add_one_to_register_zero = 0b0001000000100001;
         virtual_machine.process_input(add_one_to_register_zero);
         let result = virtual_machine.read_register(super::Register::R0);
 
         assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn can_add_two_numbers_in_differents_registers() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_one_to_register_zero = 0b0001000000100001;
+        let add_one_to_register_one = 0b0001001001100001;
+        virtual_machine.process_input(add_one_to_register_zero);
+        virtual_machine.process_input(add_one_to_register_one);
+        let add_register_zero_and_one_in_register_two = 0b0001010000000001;
+        virtual_machine.process_input(add_register_zero_and_one_in_register_two);
+        let result = virtual_machine.read_register(super::Register::R2);
+
+        assert_eq!(result, 2);
     }
 }
