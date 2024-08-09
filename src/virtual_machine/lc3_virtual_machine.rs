@@ -5,10 +5,10 @@ pub enum Instruction {
     ADD,    // yes
     LD,     // yes
     ST,     // yes
-    JSR,
-    AND, // yes
-    LDR,
-    STR,
+    JSR,    // yes
+    AND,    // yes
+    LDR,    // yes
+    STR,    // yes
     RTI,
     NOT, // yes
     LDI,
@@ -418,5 +418,26 @@ pub mod test {
         virtual_machine.process_input(jump_to_register_zero);
         let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn can_store_and_load_from_memory_with_base_and_offset() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_five_to_regiser_zero = 0b0001000000100101;
+        virtual_machine.process_input(add_five_to_regiser_zero);
+        let add_five_to_regiser_one = 0b0001001001100101;
+        virtual_machine.process_input(add_five_to_regiser_one);
+
+        let store_register_zero_value_to_memory_from_register_one_and_one_offset =
+            0b0111000001000001;
+        virtual_machine
+            .process_input(store_register_zero_value_to_memory_from_register_one_and_one_offset);
+        let load_value_from_memory_from_register_one_and_one_offset_to_register_two =
+            0b0110010001000001;
+        virtual_machine
+            .process_input(load_value_from_memory_from_register_one_and_one_offset_to_register_two);
+
+        let result = virtual_machine.read_register(super::Register::R2);
+        assert_eq!(result, 0b101);
     }
 }
