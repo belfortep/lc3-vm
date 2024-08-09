@@ -30,12 +30,14 @@ pub enum Register {
 
 pub struct LC3VirtualMachine {
     registers: Vec<u16>,
+    memory: Vec<u16>,
 }
 
 impl LC3VirtualMachine {
     pub fn new() -> Self {
         Self {
             registers: vec![0; Register::AmmountOfRegisters as usize],
+            memory: vec![0; 1 << 16],
         }
     }
 
@@ -46,69 +48,105 @@ impl LC3VirtualMachine {
         value_to_extend
     }
 
+    fn add_instruction(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let source_one_register = (instruction >> 6) & 0b111;
+        let inmediate_return_flag = (instruction >> 5) & 0b1;
+
+        if inmediate_return_flag == 1 {
+            let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
+            self.registers[destination_register as usize] =
+                self.registers[source_one_register as usize] + inmediate_value;
+        } else {
+            let source_two_register = instruction & 0b111;
+            self.registers[destination_register as usize] = self.registers
+                [source_one_register as usize]
+                + self.registers[source_two_register as usize];
+        }
+
+        self.update_flags(destination_register);
+    }
+
+    fn and_instruction(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let source_one_register = (instruction >> 6) & 0b111;
+        let inmediate_return_flag = (instruction >> 5) & 0b1;
+
+        if inmediate_return_flag == 1 {
+            let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
+            self.registers[destination_register as usize] =
+                self.registers[source_one_register as usize] & inmediate_value;
+        } else {
+            let source_two_register = instruction & 0b111;
+            self.registers[destination_register as usize] = self.registers
+                [source_one_register as usize]
+                & self.registers[source_two_register as usize];
+        }
+        self.update_flags(destination_register);
+    }
+
+    fn not_instruction(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let source_register = (instruction >> 6) & 0b111;
+
+        self.registers[destination_register as usize] = !self.registers[source_register as usize];
+    }
+
+    fn branch_instruction(&mut self, instruction: u16) {
+        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+        let negative_flag = instruction >> 11 & 0b1;
+        let zero_flag = instruction >> 10 & 0b1;
+
+        if (negative_flag == 1)
+            && (self.registers[Register::ConditionFlag as usize] == Flags::NEGATIVE as u16)
+        {
+            self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
+        } else if (zero_flag == 1)
+            && (self.registers[Register::ConditionFlag as usize] == Flags::ZERO as u16)
+        {
+            self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
+        } else {
+            self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
+        }
+    }
+    fn memory_read(&mut self, memory_address: u16) -> u16 {
+        self.memory[memory_address as usize]
+    }
+
+    fn memory_write(&mut self, memory_address: u16, value_to_write: u16) {
+        self.memory[memory_address as usize] = value_to_write;
+    }
+
+    fn load_indirect(&mut self, instruction: u16) {
+        let destination_register = (instruction >> 9) & 0b111;
+        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+
+        let memory_address = self.memory_read(
+            self.registers[Register::ProgramCounter as usize] + programm_counter_offset,
+        );
+        self.registers[destination_register as usize] = self.memory_read(memory_address);
+
+        self.update_flags(destination_register);
+    }
+
+    fn store(&mut self, instruction: u16) {
+        let source_register = (instruction >> 9) & 0b111;
+        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+        let value_to_write = self.registers[source_register as usize];
+        let memory_address =
+            self.registers[Register::ProgramCounter as usize] + programm_counter_offset;
+        self.memory_write(memory_address, value_to_write);
+    }
+
     pub fn process_input(&mut self, instruction: u16) {
         let opcode = instruction >> 12;
         match opcode {
-            opcode if opcode == Instruction::ADD as u16 => {
-                let destination_register = (instruction >> 9) & 0b111;
-                let source_one_register = (instruction >> 6) & 0b111;
-                let inmediate_return_flag = (instruction >> 5) & 0b1;
-
-                if inmediate_return_flag == 1 {
-                    let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
-                    self.registers[destination_register as usize] =
-                        self.registers[source_one_register as usize] + inmediate_value;
-                } else {
-                    let source_two_register = instruction & 0b111;
-                    self.registers[destination_register as usize] = self.registers
-                        [source_one_register as usize]
-                        + self.registers[source_two_register as usize];
-                }
-
-                self.update_flags(destination_register);
-            }
-            opcode if opcode == Instruction::AND as u16 => {
-                let destination_register = (instruction >> 9) & 0b111;
-                let source_one_register = (instruction >> 6) & 0b111;
-                let inmediate_return_flag = (instruction >> 5) & 0b1;
-
-                if inmediate_return_flag == 1 {
-                    let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
-                    self.registers[destination_register as usize] =
-                        self.registers[source_one_register as usize] & inmediate_value;
-                } else {
-                    let source_two_register = instruction & 0b111;
-                    self.registers[destination_register as usize] = self.registers
-                        [source_one_register as usize]
-                        & self.registers[source_two_register as usize];
-                }
-                self.update_flags(destination_register);
-            }
-
-            opcode if opcode == Instruction::NOT as u16 => {
-                let destination_register = (instruction >> 9) & 0b111;
-                let source_register = (instruction >> 6) & 0b111;
-
-                self.registers[destination_register as usize] =
-                    !self.registers[source_register as usize];
-            }
-            opcode if opcode == Instruction::BR as u16 => {
-                let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-                let negative_flag = instruction >> 11 & 0b1;
-                let zero_flag = instruction >> 10 & 0b1;
-
-                if (negative_flag == 1)
-                    && (self.registers[Register::ConditionFlag as usize] == Flags::NEGATIVE as u16)
-                {
-                    self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
-                } else if (zero_flag == 1)
-                    && (self.registers[Register::ConditionFlag as usize] == Flags::ZERO as u16)
-                {
-                    self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
-                } else {
-                    self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
-                }
-            }
+            opcode if opcode == Instruction::ADD as u16 => self.add_instruction(instruction),
+            opcode if opcode == Instruction::AND as u16 => self.and_instruction(instruction),
+            opcode if opcode == Instruction::NOT as u16 => self.not_instruction(instruction),
+            opcode if opcode == Instruction::BR as u16 => self.branch_instruction(instruction),
+            opcode if opcode == Instruction::LDI as u16 => self.load_indirect(instruction),
+            opcode if opcode == Instruction::ST as u16 => self.store(instruction),
             _ => {}
         }
     }
