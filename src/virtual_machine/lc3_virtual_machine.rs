@@ -1,21 +1,24 @@
-use std::process::exit;
+use std::{
+    io::{Read, Write},
+    process::exit,
+};
 
 pub enum Instruction {
-    BR = 0, // yes
-    ADD,    // yes
-    LD,     // yes
-    ST,     // yes
-    JSR,    // yes
-    AND,    // yes
-    LDR,    // yes
-    STR,    // yes
-    RTI,    // yes
-    NOT,    // yes
-    LDI,    // yes
-    STI,    // yes
-    JMP,    // yes
-    RES,    // yes
-    LEA,    // yes
+    BR = 0,
+    ADD,
+    LD,
+    ST,
+    JSR,
+    AND,
+    LDR,
+    STR,
+    RTI,
+    NOT,
+    LDI,
+    STI,
+    JMP,
+    RES,
+    LEA,
     TRAP,
 }
 
@@ -238,6 +241,81 @@ impl LC3VirtualMachine {
         self.memory_write(offset + base_register_address, value_to_write)
     }
 
+    fn trap(&mut self, instruction: u16) {
+        self.registers[Register::R7 as usize] = self.registers[Register::ProgramCounter as usize];
+
+        let trap = instruction & 0b11111111;
+
+        match trap {
+            trap if trap == Trap::GETC as u16 => {
+                let mut buffer = [0; 1];
+                std::io::stdin()
+                    .read_exact(&mut buffer)
+                    .expect("Couldn't read from stdin");
+                self.registers[Register::R0 as usize] = buffer[0] as u16;
+            }
+            trap if trap == Trap::HALT as u16 => {
+                std::process::exit(-1);
+            }
+            trap if trap == Trap::IN as u16 => {
+                println!("Enter a character: ");
+                let mut buffer = [0; 1];
+                std::io::stdin()
+                    .read_exact(&mut buffer)
+                    .expect("Couldn't read from stdin");
+                std::io::stdout()
+                    .lock()
+                    .write_all(&[buffer[0]])
+                    .expect("Couldn't write to stdout");
+                self.registers[Register::R0 as usize] = buffer[0] as u16;
+                self.update_flags(Register::R0 as u16);
+            }
+            trap if trap == Trap::OUT as u16 => {
+                let mut stdout = std::io::stdout().lock();
+                stdout
+                    .write_all(&[self.registers[Register::R0 as usize] as u8])
+                    .expect("Couldn't write to stdout");
+            }
+            trap if trap == Trap::PUTS as u16 => {
+                let mut character = self.memory[self.registers[Register::R0 as usize] as usize];
+                let mut counter = 0;
+                while character != 0 {
+                    std::io::stdout()
+                        .lock()
+                        .write_all(&[character as u8])
+                        .expect("Couldn't write to stdout");
+
+                    character =
+                        self.memory[self.registers[Register::R0 as usize] as usize + counter];
+                    counter += 1;
+                }
+            }
+            trap if trap == Trap::PUTSP as u16 => {
+                let mut character = self.memory[self.registers[Register::R0 as usize] as usize];
+                let mut counter = 0;
+                while character != 0 {
+                    let char = character & 0xFF;
+                    std::io::stdout()
+                        .lock()
+                        .write_all(&[char as u8])
+                        .expect("Couldn't write to stdout");
+                    let char = character >> 8;
+                    if char == 1 {
+                        std::io::stdout()
+                            .lock()
+                            .write_all(&[char as u8])
+                            .expect("Couldn't write to stdout");
+                    }
+
+                    character =
+                        self.memory[self.registers[Register::R0 as usize] as usize + counter];
+                    counter += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub fn process_input(&mut self, instruction: u16) {
         let opcode = instruction >> 12;
         match opcode {
@@ -256,7 +334,7 @@ impl LC3VirtualMachine {
             opcode if opcode == Instruction::LEA as u16 => self.load_effective_address(instruction),
             opcode if opcode == Instruction::RTI as u16 => (),
             opcode if opcode == Instruction::RES as u16 => (),
-            opcode if opcode == Instruction::TRAP as u16 => (),
+            opcode if opcode == Instruction::TRAP as u16 => self.trap(instruction),
             _ => {
                 exit(-1);
             }
@@ -451,5 +529,15 @@ pub mod test {
 
         let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b101);
+    }
+
+    #[test]
+    fn can_load_effective_address() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let load_effective_address_three_to_register_zero = 0b1110000000000011;
+        virtual_machine.process_input(load_effective_address_three_to_register_zero);
+
+        let result = virtual_machine.read_register(super::Register::R0);
+        assert_eq!(result, 0b11);
     }
 }
