@@ -9,13 +9,13 @@ pub enum Instruction {
     AND,    // yes
     LDR,    // yes
     STR,    // yes
-    RTI,
-    NOT, // yes
-    LDI,
-    STI,
-    JMP,
-    RES,
-    LEA,
+    RTI,    // yes
+    NOT,    // yes
+    LDI,    // yes
+    STI,    // yes
+    JMP,    // yes
+    RES,    // yes
+    LEA,    // yes
     TRAP,
 }
 
@@ -438,6 +438,18 @@ pub mod test {
             .process_input(load_value_from_memory_from_register_one_and_one_offset_to_register_two);
 
         let result = virtual_machine.read_register(super::Register::R2);
+        assert_eq!(result, 0b101);
+    }
+
+    #[test]
+    fn can_unconditionally_jumps() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_five_to_regiser_zero = 0b0001000000100101;
+        virtual_machine.process_input(add_five_to_regiser_zero);
+        let unconditionally_jump_to_register_zero_value = 0b1100000000000000;
+        virtual_machine.process_input(unconditionally_jump_to_register_zero_value);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b101);
     }
 }
