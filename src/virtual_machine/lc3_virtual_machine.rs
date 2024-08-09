@@ -5,6 +5,7 @@ pub enum Instruction {
     ST,
     JSR,
     AND,
+    NOT = 0b1001,
 }
 pub enum Register {
     R0 = 0,
@@ -73,6 +74,14 @@ impl LC3VirtualMachine {
                         & self.registers[source_two_register as usize];
                 }
             }
+
+            opcode if opcode == Instruction::NOT as u16 => {
+                let destination_register = (instruction >> 9) & 0b111;
+                let source_register = (instruction >> 6) & 0b111;
+
+                self.registers[destination_register as usize] =
+                    !self.registers[source_register as usize];
+            }
             _ => {}
         }
     }
@@ -133,5 +142,17 @@ pub mod test {
         let result = virtual_machine.read_register(super::Register::R2);
 
         assert_eq!(result, 0b00101);
+    }
+
+    #[test]
+    fn can_negate_the_values_of_two_registers() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_five_to_regiser_zero = 0b0001000000100101;
+        virtual_machine.process_input(add_five_to_regiser_zero);
+        let negate_register_zero = 0b1001000000111111;
+        virtual_machine.process_input(negate_register_zero);
+        let result = virtual_machine.read_register(super::Register::R0);
+
+        assert_eq!(result, 0b1111111111111010);
     }
 }
