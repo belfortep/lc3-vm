@@ -6,6 +6,13 @@ pub enum Instruction {
     JSR,
     AND,
     NOT = 0b1001,
+    LDI = 0b1010,
+}
+
+pub enum Flags {
+    ZERO,
+    NEGATIVE,
+    POSITIVE,
 }
 pub enum Register {
     R0 = 0,
@@ -57,6 +64,8 @@ impl LC3VirtualMachine {
                         [source_one_register as usize]
                         + self.registers[source_two_register as usize];
                 }
+
+                self.update_flags(destination_register);
             }
             opcode if opcode == Instruction::AND as u16 => {
                 let destination_register = (instruction >> 9) & 0b111;
@@ -73,6 +82,7 @@ impl LC3VirtualMachine {
                         [source_one_register as usize]
                         & self.registers[source_two_register as usize];
                 }
+                self.update_flags(destination_register);
             }
 
             opcode if opcode == Instruction::NOT as u16 => {
@@ -82,16 +92,47 @@ impl LC3VirtualMachine {
                 self.registers[destination_register as usize] =
                     !self.registers[source_register as usize];
             }
+            opcode if opcode == Instruction::BR as u16 => {
+                let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+                let negative_flag = instruction >> 11 & 0b1;
+                let zero_flag = instruction >> 10 & 0b1;
+
+                if (negative_flag == 1)
+                    && (self.registers[Register::ConditionFlag as usize] == Flags::NEGATIVE as u16)
+                {
+                    self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
+                } else if (zero_flag == 1)
+                    && (self.registers[Register::ConditionFlag as usize] == Flags::ZERO as u16)
+                {
+                    self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
+                } else {
+                    self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
+                }
+            }
             _ => {}
         }
     }
     pub fn read_register(&self, register: Register) -> u16 {
         self.registers[register as usize]
     }
+
+    fn update_flags(&mut self, register: u16) {
+        let condition_flag_register = Register::ConditionFlag as usize;
+        let register = register as usize;
+        if self.registers[register] == 0 {
+            self.registers[condition_flag_register] = Flags::ZERO as u16;
+        } else if self.registers[register] >> 15 == 1 {
+            self.registers[condition_flag_register] = Flags::NEGATIVE as u16;
+        } else {
+            self.registers[condition_flag_register] = Flags::POSITIVE as u16;
+        }
+    }
 }
 
 #[cfg(test)]
 pub mod test {
+    use crate::virtual_machine::lc3_virtual_machine::Flags;
+
     use super::LC3VirtualMachine;
 
     #[test]
@@ -154,5 +195,50 @@ pub mod test {
         let result = virtual_machine.read_register(super::Register::R0);
 
         assert_eq!(result, 0b1111111111111010);
+    }
+
+    #[test]
+    fn can_branch_if_positive_flag() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_one_to_regiser_zero = 0b0001000000100001;
+        virtual_machine.process_input(add_one_to_regiser_zero);
+        let branch_positive_flag = 0b0000001000000010;
+        virtual_machine.process_input(branch_positive_flag);
+
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
+        assert_eq!(result, Flags::POSITIVE as u16);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b10);
+    }
+
+    #[test]
+    fn can_branch_if_negative_flag() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_negative_number_to_regiser_zero = 0b0001000000110001;
+        virtual_machine.process_input(add_negative_number_to_regiser_zero);
+        let branch_negative_flag = 0b0000100000000010;
+        virtual_machine.process_input(branch_negative_flag);
+
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
+        assert_eq!(result, Flags::NEGATIVE as u16);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b10);
+    }
+
+    #[test]
+    fn can_branch_if_zero_flag() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let add_zero_to_regiser_zero = 0b0001000000100000;
+        virtual_machine.process_input(add_zero_to_regiser_zero);
+        let branch_positive_flag = 0b0000010000000010;
+        virtual_machine.process_input(branch_positive_flag);
+
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
+        assert_eq!(result, Flags::ZERO as u16);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b10);
     }
 }
