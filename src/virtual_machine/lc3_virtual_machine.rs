@@ -5,8 +5,16 @@ pub enum Instruction {
     ST,
     JSR,
     AND,
-    NOT = 0b1001,
-    LDI = 0b1010,
+    LDR,
+    STR,
+    RTI,
+    NOT,
+    LDI,
+    STI,
+    JMP,
+    RES,
+    LEA,
+    TRAP,
 }
 
 pub enum Flags {
@@ -163,6 +171,29 @@ impl LC3VirtualMachine {
         self.update_flags(destination_register);
     }
 
+    fn jump(&mut self, instruction: u16) {
+        let base_register = (instruction >> 6) & 0b111;
+        self.registers[Register::ProgramCounter as usize] = self.registers[base_register as usize];
+    }
+
+    fn jump_to_subroutine(&mut self, instruction: u16) {
+        self.registers[Register::R7 as usize] = self.registers[Register::ProgramCounter as usize];
+
+        let offset_flag = (instruction >> 11) & 0b1;
+
+        if offset_flag == 1 {
+            let programm_counter_offset = Self::sign_extend(instruction & 0b11111111111, 11);
+            let new_programm_counter_value =
+                self.registers[Register::ProgramCounter as usize] + programm_counter_offset;
+
+            self.registers[Register::ProgramCounter as usize] = new_programm_counter_value;
+        } else {
+            let base_register = (instruction >> 6) & 0b111;
+            self.registers[Register::ProgramCounter as usize] =
+                self.registers[base_register as usize];
+        }
+    }
+
     fn store(&mut self, instruction: u16) {
         let source_register = (instruction >> 9) & 0b111;
         let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
@@ -175,12 +206,22 @@ impl LC3VirtualMachine {
     pub fn process_input(&mut self, instruction: u16) {
         let opcode = instruction >> 12;
         match opcode {
-            opcode if opcode == Instruction::ADD as u16 => self.add_instruction(instruction),
-            opcode if opcode == Instruction::AND as u16 => self.and_instruction(instruction),
-            opcode if opcode == Instruction::NOT as u16 => self.not_instruction(instruction),
             opcode if opcode == Instruction::BR as u16 => self.branch_instruction(instruction),
-            opcode if opcode == Instruction::LDI as u16 => self.load_indirect(instruction),
+            opcode if opcode == Instruction::ADD as u16 => self.add_instruction(instruction),
+            opcode if opcode == Instruction::LD as u16 => self.load(instruction),
             opcode if opcode == Instruction::ST as u16 => self.store(instruction),
+            opcode if opcode == Instruction::JSR as u16 => self.jump_to_subroutine(instruction),
+            opcode if opcode == Instruction::AND as u16 => self.and_instruction(instruction),
+            opcode if opcode == Instruction::LDR as u16 => self.load_base_offset(instruction),
+            opcode if opcode == Instruction::STR as u16 => (),
+            opcode if opcode == Instruction::RTI as u16 => (),
+            opcode if opcode == Instruction::NOT as u16 => self.not_instruction(instruction),
+            opcode if opcode == Instruction::LDI as u16 => self.load_indirect(instruction),
+            opcode if opcode == Instruction::STI as u16 => (),
+            opcode if opcode == Instruction::JMP as u16 => self.jump(instruction),
+            opcode if opcode == Instruction::RES as u16 => (),
+            opcode if opcode == Instruction::LEA as u16 => self.load_effective_address(instruction),
+            opcode if opcode == Instruction::TRAP as u16 => (),
             _ => {}
         }
     }
