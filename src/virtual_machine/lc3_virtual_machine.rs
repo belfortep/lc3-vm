@@ -405,4 +405,18 @@ pub mod test {
         let result = virtual_machine.read_register(super::Register::R1);
         assert_eq!(result, 0b101);
     }
+
+    #[test]
+    fn can_jump_to_subroutine_and_return_with_register_seven() {
+        let mut virtual_machine = LC3VirtualMachine::new();
+        let jump_to_position_four = 0b0100100000000100;
+        virtual_machine.process_input(jump_to_position_four);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b100);
+        let jump_to_register_zero = 0b0100000000000000;
+        virtual_machine.process_input(jump_to_register_zero);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0);
+    }
 }
