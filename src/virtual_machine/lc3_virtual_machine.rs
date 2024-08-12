@@ -1,7 +1,4 @@
-use std::{
-    io::{Read, Write},
-    process::exit,
-};
+use std::io::{Read, Write};
 
 pub enum Instruction {
     BR = 0,
@@ -32,9 +29,9 @@ pub enum Trap {
 }
 
 pub enum Flags {
-    ZERO,
-    NEGATIVE,
-    POSITIVE,
+    ZERO = 1 << 1,
+    NEGATIVE = 1 << 2,
+    POSITIVE = 1 << 0,
 }
 pub enum Register {
     R0 = 0,
@@ -56,9 +53,11 @@ pub struct LC3VirtualMachine {
 }
 
 impl LC3VirtualMachine {
-    pub fn new() -> Self {
+    pub fn new(programm_counter_start: u16) -> Self {
+        let mut registers = vec![0; Register::AmmountOfRegisters as usize];
+        registers[Register::ProgramCounter as usize] = programm_counter_start;
         Self {
-            registers: vec![0; Register::AmmountOfRegisters as usize],
+            registers,
             memory: vec![0; 1 << 16],
         }
     }
@@ -76,14 +75,14 @@ impl LC3VirtualMachine {
         let inmediate_return_flag = (instruction >> 5) & 0b1;
 
         if inmediate_return_flag == 1 {
-            let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
-            self.registers[destination_register as usize] =
-                self.registers[source_one_register as usize] + inmediate_value;
+            let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
+            let new_register_value = inmediate_value + self.registers[source_one_register as usize];
+            self.registers[destination_register as usize] = new_register_value;
         } else {
             let source_two_register = instruction & 0b111;
-            self.registers[destination_register as usize] = self.registers
-                [source_one_register as usize]
+            let new_register_value = self.registers[source_one_register as usize]
                 + self.registers[source_two_register as usize];
+            self.registers[destination_register as usize] = new_register_value;
         }
 
         self.update_flags(destination_register);
@@ -95,7 +94,7 @@ impl LC3VirtualMachine {
         let inmediate_return_flag = (instruction >> 5) & 0b1;
 
         if inmediate_return_flag == 1 {
-            let inmediate_value = Self::sign_extend(instruction & 0b00011111, 5);
+            let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
             self.registers[destination_register as usize] =
                 self.registers[source_one_register as usize] & inmediate_value;
         } else {
@@ -116,19 +115,11 @@ impl LC3VirtualMachine {
 
     fn branch_instruction(&mut self, instruction: u16) {
         let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-        let negative_flag = instruction >> 11 & 0b1;
-        let zero_flag = instruction >> 10 & 0b1;
+        let conditions_flag = (instruction >> 9) & 0b111;
 
-        if (negative_flag == 1)
-            && (self.registers[Register::ConditionFlag as usize] == Flags::NEGATIVE as u16)
-        {
-            self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
-        } else if (zero_flag == 1)
-            && (self.registers[Register::ConditionFlag as usize] == Flags::ZERO as u16)
-        {
-            self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
-        } else {
-            self.registers[Register::ProgramCounter as usize] += programm_counter_offset;
+        if (conditions_flag & self.registers[Register::ConditionFlag as usize]) != 0 {
+            let value = self.registers[Register::ProgramCounter as usize] + programm_counter_offset;
+            self.registers[Register::ProgramCounter as usize] = value as u16;
         }
     }
     fn memory_read(&mut self, memory_address: u16) -> u16 {
@@ -238,7 +229,7 @@ impl LC3VirtualMachine {
         let value_to_write = self.registers[source_register as usize];
         let base_register_address = self.registers[base_register as usize];
 
-        self.memory_write(offset + base_register_address, value_to_write)
+        self.memory_write((offset + base_register_address) as u16, value_to_write)
     }
 
     fn trap(&mut self, instruction: u16) {
@@ -259,60 +250,46 @@ impl LC3VirtualMachine {
             }
             trap if trap == Trap::IN as u16 => {
                 println!("Enter a character: ");
-                let mut buffer = [0; 1];
-                std::io::stdin()
-                    .read_exact(&mut buffer)
-                    .expect("Couldn't read from stdin");
-                std::io::stdout()
-                    .lock()
-                    .write_all(&[buffer[0]])
-                    .expect("Couldn't write to stdout");
-                self.registers[Register::R0 as usize] = buffer[0] as u16;
-                self.update_flags(Register::R0 as u16);
+                let char = std::io::stdin()
+                    .bytes()
+                    .next()
+                    .and_then(|read_result| read_result.ok())
+                    .map(|char| char as u16)
+                    .unwrap();
+                self.registers[Register::R0 as usize] = char;
             }
             trap if trap == Trap::OUT as u16 => {
-                let mut stdout = std::io::stdout().lock();
-                stdout
-                    .write_all(&[self.registers[Register::R0 as usize] as u8])
-                    .expect("Couldn't write to stdout");
+                print!("{}", (self.registers[Register::R0 as usize] as u8) as char);
             }
             trap if trap == Trap::PUTS as u16 => {
-                let mut character = self.memory[self.registers[Register::R0 as usize] as usize];
-                let mut counter = 0;
-                while character != 0 {
-                    std::io::stdout()
-                        .lock()
-                        .write_all(&[character as u8])
-                        .expect("Couldn't write to stdout");
-
-                    character =
-                        self.memory[self.registers[Register::R0 as usize] as usize + counter];
-                    counter += 1;
+                let mut read_index = self.registers[Register::R0 as usize];
+                let mut char = self.memory_read(read_index);
+                while char != 0 {
+                    print!("{}", (char as u8) as char);
+                    read_index += 1;
+                    char = self.memory_read(read_index);
                 }
+                std::io::stdout().flush().expect("Couldn't flush");
             }
             trap if trap == Trap::PUTSP as u16 => {
-                let mut character = self.memory[self.registers[Register::R0 as usize] as usize];
-                let mut counter = 0;
-                while character != 0 {
-                    let char = character & 0xFF;
-                    std::io::stdout()
-                        .lock()
-                        .write_all(&[char as u8])
-                        .expect("Couldn't write to stdout");
-                    let char = character >> 8;
-                    if char == 1 {
-                        std::io::stdout()
-                            .lock()
-                            .write_all(&[char as u8])
-                            .expect("Couldn't write to stdout");
+                let mut read_index = self.registers[Register::R0 as usize];
+                let mut char = self.memory_read(read_index);
+                while char != 0 {
+                    let first_char = char & 0b11111111;
+                    print!("{}", (first_char as u8) as char);
+                    let second_char = char >> 8;
+                    if second_char != 0 {
+                        print!("{}", (second_char as u8) as char);
                     }
-
-                    character =
-                        self.memory[self.registers[Register::R0 as usize] as usize + counter];
-                    counter += 1;
+                    read_index += 1;
+                    char = self.memory_read(read_index);
                 }
+                std::io::stdout().flush().expect("Couldn't flush");
             }
-            _ => {}
+
+            _ => {
+                panic!("Wrong trap directive");
+            }
         }
     }
 
@@ -332,12 +309,10 @@ impl LC3VirtualMachine {
             opcode if opcode == Instruction::STI as u16 => self.store_indirect(instruction),
             opcode if opcode == Instruction::JMP as u16 => self.jump(instruction),
             opcode if opcode == Instruction::LEA as u16 => self.load_effective_address(instruction),
-            opcode if opcode == Instruction::RTI as u16 => (),
-            opcode if opcode == Instruction::RES as u16 => (),
             opcode if opcode == Instruction::TRAP as u16 => self.trap(instruction),
-            _ => {
-                exit(-1);
-            }
+            opcode if opcode == Instruction::RTI as u16 => panic!("This opcode is not supported"),
+            opcode if opcode == Instruction::RES as u16 => panic!("This opcode is not supported"),
+            _ => panic!("Wrong opcode received"),
         }
     }
     pub fn read_register(&self, register: Register) -> u16 {
@@ -349,7 +324,7 @@ impl LC3VirtualMachine {
         let register = register as usize;
         if self.registers[register] == 0 {
             self.registers[condition_flag_register] = Flags::ZERO as u16;
-        } else if self.registers[register] >> 15 == 1 {
+        } else if (self.registers[register] >> 15) != 0 {
             self.registers[condition_flag_register] = Flags::NEGATIVE as u16;
         } else {
             self.registers[condition_flag_register] = Flags::POSITIVE as u16;
@@ -365,7 +340,7 @@ pub mod test {
 
     #[test]
     fn can_add_two_numbers_in_same_register() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_one_to_register_zero = 0b0001000000100001;
         virtual_machine.process_input(add_one_to_register_zero);
         let result = virtual_machine.read_register(super::Register::R0);
@@ -375,7 +350,7 @@ pub mod test {
 
     #[test]
     fn can_add_two_numbers_in_differents_registers() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_one_to_register_zero = 0b0001000000100001;
         let add_one_to_register_one = 0b0001001001100001;
         virtual_machine.process_input(add_one_to_register_zero);
@@ -389,7 +364,7 @@ pub mod test {
 
     #[test]
     fn can_and_two_numbers_in_same_register() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_max_inmediate_value_to_register_zero = 0b0001000000111111;
         let and_five_to_register_zero = 0b0101000000100101;
         virtual_machine.process_input(add_max_inmediate_value_to_register_zero);
@@ -401,7 +376,7 @@ pub mod test {
 
     #[test]
     fn can_and_two_numbers_in_differents_registers() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_max_inmediate_value_to_register_zero = 0b0001000000111111;
         let add_five_to_regiser_one = 0b0001001001100101;
         virtual_machine.process_input(add_max_inmediate_value_to_register_zero);
@@ -415,7 +390,7 @@ pub mod test {
 
     #[test]
     fn can_negate_the_values_of_two_registers() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_five_to_regiser_zero = 0b0001000000100101;
         virtual_machine.process_input(add_five_to_regiser_zero);
         let negate_register_zero = 0b1001000000111111;
@@ -427,7 +402,7 @@ pub mod test {
 
     #[test]
     fn can_branch_if_positive_flag() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_one_to_regiser_zero = 0b0001000000100001;
         virtual_machine.process_input(add_one_to_regiser_zero);
         let branch_positive_flag = 0b0000001000000010;
@@ -442,7 +417,7 @@ pub mod test {
 
     #[test]
     fn can_branch_if_negative_flag() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_negative_number_to_regiser_zero = 0b0001000000110001;
         virtual_machine.process_input(add_negative_number_to_regiser_zero);
         let branch_negative_flag = 0b0000100000000010;
@@ -457,7 +432,7 @@ pub mod test {
 
     #[test]
     fn can_branch_if_zero_flag() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_zero_to_regiser_zero = 0b0001000000100000;
         virtual_machine.process_input(add_zero_to_regiser_zero);
         let branch_positive_flag = 0b0000010000000010;
@@ -472,7 +447,7 @@ pub mod test {
 
     #[test]
     fn can_store_and_load_from_memory() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_five_to_regiser_zero = 0b0001000000100101;
         virtual_machine.process_input(add_five_to_regiser_zero);
         let store_register_zero_value_to_memory = 0b0011000000000001;
@@ -486,7 +461,7 @@ pub mod test {
 
     #[test]
     fn can_jump_to_subroutine_and_return_with_register_seven() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let jump_to_position_four = 0b0100100000000100;
         virtual_machine.process_input(jump_to_position_four);
 
@@ -500,7 +475,7 @@ pub mod test {
 
     #[test]
     fn can_store_and_load_from_memory_with_base_and_offset() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_five_to_regiser_zero = 0b0001000000100101;
         virtual_machine.process_input(add_five_to_regiser_zero);
         let add_five_to_regiser_one = 0b0001001001100101;
@@ -521,7 +496,7 @@ pub mod test {
 
     #[test]
     fn can_unconditionally_jumps() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_five_to_regiser_zero = 0b0001000000100101;
         virtual_machine.process_input(add_five_to_regiser_zero);
         let unconditionally_jump_to_register_zero_value = 0b1100000000000000;
@@ -533,7 +508,7 @@ pub mod test {
 
     #[test]
     fn can_load_effective_address() {
-        let mut virtual_machine = LC3VirtualMachine::new();
+        let mut virtual_machine = LC3VirtualMachine::new(0);
         let load_effective_address_three_to_register_zero = 0b1110000000000011;
         virtual_machine.process_input(load_effective_address_three_to_register_zero);
 
