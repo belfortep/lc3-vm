@@ -63,9 +63,64 @@ impl LC3VirtualMachine {
         self.memory[memory_address as usize] = value_to_write;
     }
 
+    pub fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
+        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
+            value_to_extend |= 0xFFFF << ammount_of_bits;
+        }
+        value_to_extend
+    }
+
     pub fn process_input(&mut self, instruction: u16) {
         let instruction_opcode = Instruction::from(instruction >> 12);
-        instruction_opcode.execute_instruction(self, instruction);
+        match instruction_opcode {
+            Instruction::BR => instruction_opcode.branch(self, instruction),
+            Instruction::ADD => {
+                let destination_register = Register::from((instruction >> 9) & 0b111);
+                let source_one_register = Register::from((instruction >> 6) & 0b111);
+                let inmediate_return_flag = (instruction >> 5) & 0b1;
+
+                if inmediate_return_flag == 1 {
+                    let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
+
+                    instruction_opcode.add_inmediate(
+                        self,
+                        destination_register,
+                        source_one_register,
+                        inmediate_value,
+                    )
+                } else {
+                    let source_two_register = Register::from(instruction & 0b111);
+                    instruction_opcode.add(
+                        self,
+                        destination_register,
+                        source_one_register,
+                        source_two_register,
+                    )
+                }
+            }
+            Instruction::LD => {
+                let destination_register = Register::from((instruction >> 9) & 0b111);
+                let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+                instruction_opcode.load(self, destination_register, program_counter_offset)
+            }
+            Instruction::ST => instruction_opcode.store(self, instruction),
+            Instruction::JSR => instruction_opcode.jump_to_subroutine(self, instruction),
+            Instruction::AND => instruction_opcode.and(self, instruction),
+            Instruction::LDR => instruction_opcode.load_base_offset(self, instruction),
+            Instruction::STR => instruction_opcode.store_base_offset(self, instruction),
+            Instruction::NOT => {
+                let destination_register = Register::from((instruction >> 9) & 0b111);
+                let source_register = Register::from((instruction >> 6) & 0b111);
+                instruction_opcode.not(self, destination_register, source_register)
+            }
+            Instruction::LDI => instruction_opcode.load_indirect(self, instruction),
+            Instruction::STI => instruction_opcode.store_indirect(self, instruction),
+            Instruction::JMP => instruction_opcode.jump(self, instruction),
+            Instruction::LEA => instruction_opcode.load_effective_address(self, instruction),
+            Instruction::TRAP => instruction_opcode.trap(self, instruction),
+            Instruction::RTI => panic!("This opcode is not supported"),
+            Instruction::RES => panic!("This opcode is not supported"),
+        }
     }
     pub fn read_register(&self, source_register: Register) -> u16 {
         self.registers[source_register as usize]
