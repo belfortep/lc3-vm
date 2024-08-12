@@ -118,10 +118,8 @@ impl LC3VirtualMachine {
                 let destination_register = Register::from((instruction >> 9) & 0b111);
                 let source_one_register = Register::from((instruction >> 6) & 0b111);
                 let inmediate_return_flag = (instruction >> 5) & 0b1;
-
                 if inmediate_return_flag == 1 {
                     let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
-
                     add_inmediate(
                         self,
                         destination_register,
