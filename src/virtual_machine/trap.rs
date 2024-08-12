@@ -31,7 +31,7 @@ impl Trap {
         std::io::stdin()
             .read_exact(&mut buffer)
             .expect("Couldn't read from stdin");
-        virtual_machine.update_register(Register::R0 as u16, buffer[0] as u16);
+        virtual_machine.update_register(Register::R0, buffer[0] as u16);
     }
 
     fn halt(&self) {
@@ -46,7 +46,7 @@ impl Trap {
             .and_then(|read_result| read_result.ok())
             .map(|char| char as u16)
             .unwrap();
-        virtual_machine.update_register(Register::R0 as u16, char);
+        virtual_machine.update_register(Register::R0, char);
     }
 
     fn out(&self, virtual_machine: &mut LC3VirtualMachine) {

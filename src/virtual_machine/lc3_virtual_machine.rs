@@ -1,5 +1,6 @@
 use super::instructions::Instruction;
 
+const AMMOUNT_OF_REGISTERS: usize = 10;
 struct Flags;
 impl Flags {
     pub const POSITIVE: u16 = 1 << 0;
@@ -7,19 +8,36 @@ impl Flags {
     pub const NEGATIVE: u16 = 1 << 2;
 }
 
-pub struct Register;
-impl Register {
-    pub const R0: usize = 0;
-    pub const R1: usize = 1;
-    pub const R2: usize = 2;
-    pub const R3: usize = 3;
-    pub const R4: usize = 4;
-    pub const R5: usize = 5;
-    pub const R6: usize = 6;
-    pub const R7: usize = 7;
-    pub const PROGRAM_COUNTER: usize = 8;
-    pub const CONDITION_FLAG: usize = 9;
-    pub const AMMOUNT_OF_REGISTERS: usize = 10;
+#[derive(Clone, Copy)]
+pub enum Register {
+    R0,
+    R1,
+    R2,
+    R3,
+    R4,
+    R5,
+    R6,
+    R7,
+    ProgramCounter,
+    ConditionFlag,
+}
+
+impl From<u16> for Register {
+    fn from(value: u16) -> Self {
+        match value {
+            0 => Register::R0,
+            1 => Register::R1,
+            2 => Register::R2,
+            3 => Register::R3,
+            4 => Register::R4,
+            5 => Register::R5,
+            6 => Register::R6,
+            7 => Register::R7,
+            8 => Register::ProgramCounter,
+            9 => Register::ConditionFlag,
+            _ => panic!("Wrong Register"),
+        }
+    }
 }
 
 pub struct LC3VirtualMachine {
@@ -29,8 +47,8 @@ pub struct LC3VirtualMachine {
 
 impl LC3VirtualMachine {
     pub fn new(programm_counter_start: u16) -> Self {
-        let mut registers = vec![0; Register::AMMOUNT_OF_REGISTERS];
-        registers[Register::PROGRAM_COUNTER] = programm_counter_start;
+        let mut registers = vec![0; AMMOUNT_OF_REGISTERS];
+        registers[Register::ProgramCounter as usize] = programm_counter_start;
         Self {
             registers,
             memory: vec![0; 1 << 16],
@@ -49,25 +67,22 @@ impl LC3VirtualMachine {
         let instruction_opcode = Instruction::from(instruction >> 12);
         instruction_opcode.execute_instruction(self, instruction);
     }
-    pub fn read_register(&self, source_register: usize) -> u16 {
-        if source_register > self.registers.len() {
-            return 0;
-        }
-        self.registers[source_register]
+    pub fn read_register(&self, source_register: Register) -> u16 {
+        self.registers[source_register as usize]
     }
 
-    pub fn update_register(&mut self, destination_register: u16, new_register_value: u16) {
+    pub fn update_register(&mut self, destination_register: Register, new_register_value: u16) {
         self.registers[destination_register as usize] = new_register_value;
     }
 
-    pub fn update_flags(&mut self, register: u16) {
+    pub fn update_flags(&mut self, register: Register) {
         let register = register as usize;
         if self.registers[register] == 0 {
-            self.registers[Register::CONDITION_FLAG] = Flags::ZERO;
+            self.registers[Register::ConditionFlag as usize] = Flags::ZERO;
         } else if (self.registers[register] >> 15) != 0 {
-            self.registers[Register::CONDITION_FLAG] = Flags::NEGATIVE;
+            self.registers[Register::ConditionFlag as usize] = Flags::NEGATIVE;
         } else {
-            self.registers[Register::CONDITION_FLAG] = Flags::POSITIVE;
+            self.registers[Register::ConditionFlag as usize] = Flags::POSITIVE;
         }
     }
 }
@@ -148,10 +163,10 @@ pub mod test {
         let branch_positive_flag = 0b0000001000000010;
         virtual_machine.process_input(branch_positive_flag);
 
-        let result = virtual_machine.read_register(super::Register::CONDITION_FLAG);
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
         assert_eq!(result, Flags::POSITIVE);
 
-        let result = virtual_machine.read_register(super::Register::PROGRAM_COUNTER);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b10);
     }
 
@@ -163,10 +178,10 @@ pub mod test {
         let branch_negative_flag = 0b0000100000000010;
         virtual_machine.process_input(branch_negative_flag);
 
-        let result = virtual_machine.read_register(super::Register::CONDITION_FLAG);
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
         assert_eq!(result, Flags::NEGATIVE);
 
-        let result = virtual_machine.read_register(super::Register::PROGRAM_COUNTER);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b10);
     }
 
@@ -178,10 +193,10 @@ pub mod test {
         let branch_positive_flag = 0b0000010000000010;
         virtual_machine.process_input(branch_positive_flag);
 
-        let result = virtual_machine.read_register(super::Register::CONDITION_FLAG);
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
         assert_eq!(result, Flags::ZERO);
 
-        let result = virtual_machine.read_register(super::Register::PROGRAM_COUNTER);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b10);
     }
 
@@ -205,11 +220,11 @@ pub mod test {
         let jump_to_position_four = 0b0100100000000100;
         virtual_machine.process_input(jump_to_position_four);
 
-        let result = virtual_machine.read_register(super::Register::PROGRAM_COUNTER);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b100);
         let jump_to_register_zero = 0b0100000000000000;
         virtual_machine.process_input(jump_to_register_zero);
-        let result = virtual_machine.read_register(super::Register::PROGRAM_COUNTER);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0);
     }
 
@@ -242,7 +257,7 @@ pub mod test {
         let unconditionally_jump_to_register_zero_value = 0b1100000000000000;
         virtual_machine.process_input(unconditionally_jump_to_register_zero_value);
 
-        let result = virtual_machine.read_register(super::Register::PROGRAM_COUNTER);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b101);
     }
 
