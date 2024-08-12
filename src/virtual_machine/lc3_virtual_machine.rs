@@ -46,9 +46,9 @@ pub struct LC3VirtualMachine {
 }
 
 impl LC3VirtualMachine {
-    pub fn new(programm_counter_start: u16) -> Self {
+    pub fn new(program_counter_start: u16) -> Self {
         let mut registers = vec![0; AMMOUNT_OF_REGISTERS];
-        registers[Register::ProgramCounter as usize] = programm_counter_start;
+        registers[Register::ProgramCounter as usize] = program_counter_start;
         Self {
             registers,
             memory: vec![0; 1 << 16],
@@ -78,11 +78,11 @@ impl LC3VirtualMachine {
     pub fn update_flags(&mut self, register: Register) {
         let register = register as usize;
         if self.registers[register] == 0 {
-            self.registers[Register::ConditionFlag as usize] = Flags::ZERO;
+            self.update_register(Register::ConditionFlag, Flags::ZERO)
         } else if (self.registers[register] >> 15) != 0 {
-            self.registers[Register::ConditionFlag as usize] = Flags::NEGATIVE;
+            self.update_register(Register::ConditionFlag, Flags::NEGATIVE)
         } else {
-            self.registers[Register::ConditionFlag as usize] = Flags::POSITIVE;
+            self.update_register(Register::ConditionFlag, Flags::POSITIVE)
         }
     }
 }
