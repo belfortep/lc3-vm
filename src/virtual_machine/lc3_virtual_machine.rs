@@ -1,50 +1,17 @@
 use std::io::Read;
 
-use super::{instructions::*, trap::Trap};
+use super::{instructions::*, register::Register, trap::Trap};
 
 const AMMOUNT_OF_REGISTERS: usize = 10;
-struct Flags;
-impl Flags {
-    pub const POSITIVE: u16 = 1 << 0;
-    pub const ZERO: u16 = 1 << 1;
-    pub const NEGATIVE: u16 = 1 << 2;
+pub enum Flag {
+    POSITIVE = 1 << 0,
+    ZERO = 1 << 1,
+    NEGATIVE = 1 << 2,
 }
 
 enum MemoryMappedRegister {
     KeyBoardStatusRegister = 0xFE00,
     KeyBoardDataRegister = 0xFE02,
-}
-
-#[derive(Clone, Copy)]
-pub enum Register {
-    R0,
-    R1,
-    R2,
-    R3,
-    R4,
-    R5,
-    R6,
-    R7,
-    ProgramCounter,
-    ConditionFlag,
-}
-
-impl From<u16> for Register {
-    fn from(value: u16) -> Self {
-        match value {
-            0 => Register::R0,
-            1 => Register::R1,
-            2 => Register::R2,
-            3 => Register::R3,
-            4 => Register::R4,
-            5 => Register::R5,
-            6 => Register::R6,
-            7 => Register::R7,
-            8 => Register::ProgramCounter,
-            9 => Register::ConditionFlag,
-            _ => panic!("Wrong Register"),
-        }
-    }
 }
 
 pub struct LC3VirtualMachine {
@@ -73,11 +40,11 @@ impl LC3VirtualMachine {
     pub fn update_flags(&mut self, register: Register) {
         let register = register as usize;
         if self.registers[register] == 0 {
-            self.update_register(Register::ConditionFlag, Flags::ZERO)
+            self.update_register(Register::ConditionFlag, Flag::ZERO as u16)
         } else if (self.registers[register] >> 15) != 0 {
-            self.update_register(Register::ConditionFlag, Flags::NEGATIVE)
+            self.update_register(Register::ConditionFlag, Flag::NEGATIVE as u16)
         } else {
-            self.update_register(Register::ConditionFlag, Flags::POSITIVE)
+            self.update_register(Register::ConditionFlag, Flag::POSITIVE as u16)
         }
     }
 
@@ -233,7 +200,7 @@ impl LC3VirtualMachine {
 
 #[cfg(test)]
 pub mod test {
-    use crate::virtual_machine::lc3_virtual_machine::Flags;
+    use crate::virtual_machine::lc3_virtual_machine::Flag;
 
     use super::LC3VirtualMachine;
 
@@ -308,7 +275,7 @@ pub mod test {
         virtual_machine.process_input(branch_positive_flag);
 
         let result = virtual_machine.read_register(super::Register::ConditionFlag);
-        assert_eq!(result, Flags::POSITIVE);
+        assert_eq!(result, Flag::POSITIVE as u16);
 
         let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b10);
@@ -323,7 +290,7 @@ pub mod test {
         virtual_machine.process_input(branch_negative_flag);
 
         let result = virtual_machine.read_register(super::Register::ConditionFlag);
-        assert_eq!(result, Flags::NEGATIVE);
+        assert_eq!(result, Flag::NEGATIVE as u16);
 
         let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b10);
@@ -338,7 +305,7 @@ pub mod test {
         virtual_machine.process_input(branch_zero_flag);
 
         let result = virtual_machine.read_register(super::Register::ConditionFlag);
-        assert_eq!(result, Flags::ZERO);
+        assert_eq!(result, Flag::ZERO as u16);
 
         let result = virtual_machine.read_register(super::Register::ProgramCounter);
         assert_eq!(result, 0b10);

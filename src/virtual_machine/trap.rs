@@ -1,6 +1,8 @@
 use std::io::{Read, Write};
 
-use super::lc3_virtual_machine::{LC3VirtualMachine, Register};
+use crate::virtual_machine::register::Register;
+
+use super::lc3_virtual_machine::LC3VirtualMachine;
 
 pub enum Trap {
     GETC,

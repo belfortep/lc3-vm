@@ -1,7 +1,4 @@
-use super::{
-    lc3_virtual_machine::{LC3VirtualMachine, Register},
-    trap::Trap,
-};
+use super::{lc3_virtual_machine::LC3VirtualMachine, register::Register, trap::Trap};
 
 pub enum Instruction {
     BR = 0,
