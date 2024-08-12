@@ -1,23 +1,46 @@
 use std::io::{Read, Write};
 
-struct Instruction;
-impl Instruction {
-    pub const BR: u16 = 0;
-    pub const ADD: u16 = 1;
-    pub const LD: u16 = 2;
-    pub const ST: u16 = 3;
-    pub const JSR: u16 = 4;
-    pub const AND: u16 = 5;
-    pub const LDR: u16 = 6;
-    pub const STR: u16 = 7;
-    pub const RTI: u16 = 8;
-    pub const NOT: u16 = 9;
-    pub const LDI: u16 = 10;
-    pub const STI: u16 = 11;
-    pub const JMP: u16 = 12;
-    pub const RES: u16 = 13;
-    pub const LEA: u16 = 14;
-    pub const TRAP: u16 = 15;
+pub enum Instruction {
+    BR = 0,
+    ADD,
+    LD,
+    ST,
+    JSR,
+    AND,
+    LDR,
+    STR,
+    RTI,
+    NOT,
+    LDI,
+    STI,
+    JMP,
+    RES,
+    LEA,
+    TRAP,
+}
+
+impl From<u16> for Instruction {
+    fn from(value: u16) -> Self {
+        match value {
+            0 => Instruction::BR,
+            1 => Instruction::ADD,
+            2 => Instruction::LD,
+            3 => Instruction::ST,
+            4 => Instruction::JSR,
+            5 => Instruction::AND,
+            6 => Instruction::LDR,
+            7 => Instruction::STR,
+            8 => Instruction::RTI,
+            9 => Instruction::NOT,
+            10 => Instruction::LDI,
+            11 => Instruction::STI,
+            12 => Instruction::JMP,
+            13 => Instruction::RES,
+            14 => Instruction::LEA,
+            15 => Instruction::TRAP,
+            _ => panic!("Wrong Instruction code"),
+        }
+    }
 }
 
 struct Trap;
@@ -294,8 +317,8 @@ impl LC3VirtualMachine {
     }
 
     pub fn process_input(&mut self, instruction: u16) {
-        let opcode = instruction >> 12;
-        match opcode {
+        let instruction_opcode = Instruction::from(instruction >> 12);
+        match instruction_opcode {
             Instruction::BR => self.branch_instruction(instruction),
             Instruction::ADD => self.add_instruction(instruction),
             Instruction::LD => self.load(instruction),
@@ -312,7 +335,6 @@ impl LC3VirtualMachine {
             Instruction::TRAP => self.trap(instruction),
             Instruction::RTI => panic!("This opcode is not supported"),
             Instruction::RES => panic!("This opcode is not supported"),
-            _ => panic!("Wrong opcode received"),
         }
     }
     pub fn read_register(&self, register: usize) -> u16 {
@@ -323,14 +345,13 @@ impl LC3VirtualMachine {
     }
 
     fn update_flags(&mut self, register: u16) {
-        let condition_flag_register = Register::CONDITION_FLAG;
         let register = register as usize;
         if self.registers[register] == 0 {
-            self.registers[condition_flag_register] = Flags::ZERO;
+            self.registers[Register::CONDITION_FLAG] = Flags::ZERO;
         } else if (self.registers[register] >> 15) != 0 {
-            self.registers[condition_flag_register] = Flags::NEGATIVE;
+            self.registers[Register::CONDITION_FLAG] = Flags::NEGATIVE;
         } else {
-            self.registers[condition_flag_register] = Flags::POSITIVE;
+            self.registers[Register::CONDITION_FLAG] = Flags::POSITIVE;
         }
     }
 }
