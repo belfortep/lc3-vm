@@ -26,8 +26,9 @@ fn main() -> Result<(), String> {
                 Err(_) => break,
             }
         }
-
-        virtual_machine.run();
+        loop {
+            virtual_machine.next_instruction();
+        }
     }
 
     Ok(())
