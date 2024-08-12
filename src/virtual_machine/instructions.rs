@@ -46,205 +46,204 @@ impl From<u16> for Instruction {
     }
 }
 
-impl Instruction {
-    pub fn add(
-        &self,
-        virtual_machine: &mut LC3VirtualMachine,
-        destination_register: Register,
-        source_one_register: Register,
-        source_two_register: Register,
-    ) {
-        let new_register_value = virtual_machine.read_register(source_one_register)
-            + virtual_machine.read_register(source_two_register);
+pub fn add(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    source_one_register: Register,
+    source_two_register: Register,
+) {
+    let new_register_value = virtual_machine.read_register(source_one_register)
+        + virtual_machine.read_register(source_two_register);
 
-        virtual_machine.update_register(destination_register, new_register_value);
+    virtual_machine.update_register(destination_register, new_register_value);
 
-        virtual_machine.update_flags(destination_register);
-    }
+    virtual_machine.update_flags(destination_register);
+}
 
-    pub fn add_inmediate(
-        &self,
-        virtual_machine: &mut LC3VirtualMachine,
-        destination_register: Register,
-        source_one_register: Register,
-        inmediate_value: u16,
-    ) {
-        let new_register_value =
-            inmediate_value + virtual_machine.read_register(source_one_register);
+pub fn add_inmediate(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    source_one_register: Register,
+    inmediate_value: u16,
+) {
+    let new_register_value = inmediate_value + virtual_machine.read_register(source_one_register);
 
-        virtual_machine.update_register(destination_register, new_register_value);
-        virtual_machine.update_flags(destination_register);
-    }
+    virtual_machine.update_register(destination_register, new_register_value);
+    virtual_machine.update_flags(destination_register);
+}
 
-    pub fn load(
-        &self,
-        virtual_machine: &mut LC3VirtualMachine,
-        destination_register: Register,
-        program_counter_offset: u16,
-    ) {
-        let new_register_value = virtual_machine.memory_read(
-            virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset,
-        );
+pub fn load(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    program_counter_offset: u16,
+) {
+    let new_register_value = virtual_machine.memory_read(
+        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset,
+    );
 
-        virtual_machine.update_register(destination_register, new_register_value);
-        virtual_machine.update_flags(destination_register);
-    }
+    virtual_machine.update_register(destination_register, new_register_value);
+    virtual_machine.update_flags(destination_register);
+}
 
-    pub fn load_indirect(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let destination_register = Register::from((instruction >> 9) & 0b111);
-        let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+pub fn load_indirect(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    program_counter_offset: u16,
+) {
+    let memory_address = virtual_machine.memory_read(
+        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset,
+    );
+    let new_register_value = virtual_machine.memory_read(memory_address);
+    virtual_machine.update_register(destination_register, new_register_value);
 
-        let memory_address = virtual_machine.memory_read(
-            virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset,
-        );
-        let new_register_value = virtual_machine.memory_read(memory_address);
-        virtual_machine.update_register(destination_register, new_register_value);
+    virtual_machine.update_flags(destination_register);
+}
 
-        virtual_machine.update_flags(destination_register);
-    }
+pub fn not(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    source_register: Register,
+) {
+    let new_register_value = !virtual_machine.read_register(source_register);
+    virtual_machine.update_register(destination_register, new_register_value);
+}
 
-    pub fn not(
-        &self,
-        virtual_machine: &mut LC3VirtualMachine,
-        destination_register: Register,
-        source_register: Register,
-    ) {
-        let new_register_value = !virtual_machine.read_register(source_register);
-        virtual_machine.update_register(destination_register, new_register_value);
-    }
-
-    pub fn branch(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-        let conditions_flag = (instruction >> 9) & 0b111;
-        if (conditions_flag & virtual_machine.read_register(Register::ConditionFlag)) != 0 {
-            let new_register_value =
-                virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
-            virtual_machine.update_register(Register::ProgramCounter, new_register_value);
-        }
-    }
-
-    pub fn and(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let destination_register = Register::from((instruction >> 9) & 0b111);
-        let source_one_register = Register::from((instruction >> 6) & 0b111);
-        let inmediate_return_flag = (instruction >> 5) & 0b1;
-
-        if inmediate_return_flag == 1 {
-            let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
-            let new_register_value =
-                virtual_machine.read_register(source_one_register) & inmediate_value;
-            virtual_machine.update_register(destination_register, new_register_value);
-        } else {
-            let source_two_register = Register::from(instruction & 0b111);
-            let new_register_value = virtual_machine.read_register(source_one_register)
-                & virtual_machine.read_register(source_two_register);
-            virtual_machine.update_register(destination_register, new_register_value);
-        }
-        virtual_machine.update_flags(destination_register);
-    }
-
-    pub fn trap(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        virtual_machine.update_register(
-            Register::R7,
-            virtual_machine.read_register(Register::ProgramCounter),
-        );
-        let trap = Trap::from(instruction & 0b11111111);
-
-        trap.execute_trap(virtual_machine);
-    }
-
-    pub fn load_base_offset(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let destination_register = Register::from((instruction >> 9) & 0b111);
-        let base_register = Register::from((instruction >> 6) & 0b111);
-        let offset = Self::sign_extend(instruction & 0b111111, 6);
-
-        let register_value = virtual_machine.read_register(base_register);
-        let new_register_value = virtual_machine.memory_read(register_value + offset);
-        virtual_machine.update_register(destination_register, new_register_value);
-
-        virtual_machine.update_flags(destination_register);
-    }
-
-    pub fn load_effective_address(
-        &self,
-        virtual_machine: &mut LC3VirtualMachine,
-        instruction: u16,
-    ) {
-        let destination_register = Register::from((instruction >> 9) & 0b111);
-        let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+pub fn branch(
+    virtual_machine: &mut LC3VirtualMachine,
+    program_counter_offset: u16,
+    conditions_flag: u16,
+) {
+    if (conditions_flag & virtual_machine.read_register(Register::ConditionFlag)) != 0 {
         let new_register_value =
             virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
-        virtual_machine.update_register(destination_register, new_register_value);
-
-        virtual_machine.update_flags(destination_register);
-    }
-
-    pub fn jump(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let base_register = Register::from((instruction >> 6) & 0b111);
-        let new_register_value = virtual_machine.read_register(base_register);
         virtual_machine.update_register(Register::ProgramCounter, new_register_value);
     }
+}
 
-    pub fn jump_to_subroutine(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        virtual_machine.update_register(
-            Register::R7,
-            virtual_machine.read_register(Register::ProgramCounter),
-        );
+pub fn and(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    source_one_register: Register,
+    source_two_register: Register,
+) {
+    let new_register_value = virtual_machine.read_register(source_one_register)
+        & virtual_machine.read_register(source_two_register);
+    virtual_machine.update_register(destination_register, new_register_value);
 
-        let offset_flag = (instruction >> 11) & 0b1;
+    virtual_machine.update_flags(destination_register);
+}
 
-        if offset_flag == 1 {
-            let program_counter_offset = Self::sign_extend(instruction & 0b11111111111, 11);
-            let new_register_value =
-                virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
+pub fn and_inmediate(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    source_one_register: Register,
+    inmediate_value: u16,
+) {
+    let new_register_value = virtual_machine.read_register(source_one_register) & inmediate_value;
+    virtual_machine.update_register(destination_register, new_register_value);
+}
 
-            virtual_machine.update_register(Register::ProgramCounter, new_register_value);
-        } else {
-            let base_register = Register::from((instruction >> 6) & 0b111);
-            virtual_machine.update_register(
-                Register::ProgramCounter,
-                virtual_machine.read_register(base_register),
-            );
-        }
-    }
+pub fn trap_instruction(virtual_machine: &mut LC3VirtualMachine, trap: Trap) {
+    virtual_machine.update_register(
+        Register::R7,
+        virtual_machine.read_register(Register::ProgramCounter),
+    );
 
-    pub fn store(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let source_register = Register::from((instruction >> 9) & 0b111);
-        let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-        let value_to_write = virtual_machine.read_register(source_register);
-        let memory_address =
-            virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
-        virtual_machine.memory_write(memory_address, value_to_write);
-    }
+    trap.execute_trap(virtual_machine);
+}
 
-    pub fn store_indirect(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let source_register = Register::from((instruction >> 9) & 0b111);
-        let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-        let value_to_write = virtual_machine.read_register(source_register);
+pub fn load_base_offset(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    base_register: Register,
+    offset: u16,
+) {
+    let register_value = virtual_machine.read_register(base_register);
+    let new_register_value = virtual_machine.memory_read(register_value + offset);
+    virtual_machine.update_register(destination_register, new_register_value);
 
-        let memory_address = virtual_machine.memory_read(
-            virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset,
-        );
+    virtual_machine.update_flags(destination_register);
+}
 
-        let destination_address = virtual_machine.memory_read(memory_address);
+pub fn load_effective_address(
+    virtual_machine: &mut LC3VirtualMachine,
+    destination_register: Register,
+    program_counter_offset: u16,
+) {
+    let new_register_value =
+        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
+    virtual_machine.update_register(destination_register, new_register_value);
 
-        virtual_machine.memory_write(destination_address, value_to_write);
-    }
+    virtual_machine.update_flags(destination_register);
+}
 
-    pub fn store_base_offset(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
-        let source_register = Register::from((instruction >> 9) & 0b111);
-        let base_register = Register::from((instruction >> 6) & 0b111);
-        let offset = Self::sign_extend(instruction & 0b111111, 6);
+pub fn jump(virtual_machine: &mut LC3VirtualMachine, base_register: Register) {
+    let new_register_value = virtual_machine.read_register(base_register);
+    virtual_machine.update_register(Register::ProgramCounter, new_register_value);
+}
 
-        let value_to_write = virtual_machine.read_register(source_register);
-        let base_register_address = virtual_machine.read_register(base_register);
+pub fn jump_to_subroutine(virtual_machine: &mut LC3VirtualMachine, base_register: Register) {
+    virtual_machine.update_register(
+        Register::R7,
+        virtual_machine.read_register(Register::ProgramCounter),
+    );
 
-        virtual_machine.memory_write(offset + base_register_address, value_to_write)
-    }
+    virtual_machine.update_register(
+        Register::ProgramCounter,
+        virtual_machine.read_register(base_register),
+    );
+}
 
-    pub fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
-        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
-            value_to_extend |= 0xFFFF << ammount_of_bits;
-        }
-        value_to_extend
-    }
+pub fn jump_to_subroutine_with_offset(
+    virtual_machine: &mut LC3VirtualMachine,
+    program_counter_offset: u16,
+) {
+    virtual_machine.update_register(
+        Register::R7,
+        virtual_machine.read_register(Register::ProgramCounter),
+    );
+
+    let new_register_value =
+        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
+
+    virtual_machine.update_register(Register::ProgramCounter, new_register_value);
+}
+
+pub fn store(
+    virtual_machine: &mut LC3VirtualMachine,
+    source_register: Register,
+    program_counter_offset: u16,
+) {
+    let value_to_write = virtual_machine.read_register(source_register);
+    let memory_address =
+        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
+    virtual_machine.memory_write(memory_address, value_to_write);
+}
+
+pub fn store_indirect(
+    virtual_machine: &mut LC3VirtualMachine,
+    source_register: Register,
+    program_counter_offset: u16,
+) {
+    let value_to_write = virtual_machine.read_register(source_register);
+
+    let memory_address = virtual_machine.memory_read(
+        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset,
+    );
+
+    let destination_address = virtual_machine.memory_read(memory_address);
+
+    virtual_machine.memory_write(destination_address, value_to_write);
+}
+
+pub fn store_base_offset(
+    virtual_machine: &mut LC3VirtualMachine,
+    source_register: Register,
+    base_register: Register,
+    offset: u16,
+) {
+    let value_to_write = virtual_machine.read_register(source_register);
+    let base_register_address = virtual_machine.read_register(base_register);
+
+    virtual_machine.memory_write(offset + base_register_address, value_to_write)
 }

@@ -1,4 +1,4 @@
-use super::instructions::Instruction;
+use super::{instructions::*, trap::Trap};
 
 const AMMOUNT_OF_REGISTERS: usize = 10;
 struct Flags;
@@ -73,7 +73,11 @@ impl LC3VirtualMachine {
     pub fn process_input(&mut self, instruction: u16) {
         let instruction_opcode = Instruction::from(instruction >> 12);
         match instruction_opcode {
-            Instruction::BR => instruction_opcode.branch(self, instruction),
+            Instruction::BR => {
+                let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+                let conditions_flag = (instruction >> 9) & 0b111;
+                branch(self, program_counter_offset, conditions_flag)
+            }
             Instruction::ADD => {
                 let destination_register = Register::from((instruction >> 9) & 0b111);
                 let source_one_register = Register::from((instruction >> 6) & 0b111);
@@ -82,7 +86,7 @@ impl LC3VirtualMachine {
                 if inmediate_return_flag == 1 {
                     let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
 
-                    instruction_opcode.add_inmediate(
+                    add_inmediate(
                         self,
                         destination_register,
                         source_one_register,
@@ -90,7 +94,7 @@ impl LC3VirtualMachine {
                     )
                 } else {
                     let source_two_register = Register::from(instruction & 0b111);
-                    instruction_opcode.add(
+                    add(
                         self,
                         destination_register,
                         source_one_register,
@@ -101,23 +105,85 @@ impl LC3VirtualMachine {
             Instruction::LD => {
                 let destination_register = Register::from((instruction >> 9) & 0b111);
                 let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-                instruction_opcode.load(self, destination_register, program_counter_offset)
+                load(self, destination_register, program_counter_offset)
             }
-            Instruction::ST => instruction_opcode.store(self, instruction),
-            Instruction::JSR => instruction_opcode.jump_to_subroutine(self, instruction),
-            Instruction::AND => instruction_opcode.and(self, instruction),
-            Instruction::LDR => instruction_opcode.load_base_offset(self, instruction),
-            Instruction::STR => instruction_opcode.store_base_offset(self, instruction),
+            Instruction::ST => {
+                let source_register = Register::from((instruction >> 9) & 0b111);
+                let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+                store(self, source_register, program_counter_offset)
+            }
+            Instruction::JSR => {
+                let offset_flag = (instruction >> 11) & 0b1;
+                if offset_flag == 1 {
+                    let program_counter_offset = Self::sign_extend(instruction & 0b11111111111, 11);
+                    jump_to_subroutine_with_offset(self, program_counter_offset)
+                } else {
+                    let base_register = Register::from((instruction >> 6) & 0b111);
+                    jump_to_subroutine(self, base_register)
+                }
+            }
+            Instruction::AND => {
+                let destination_register = Register::from((instruction >> 9) & 0b111);
+                let source_one_register = Register::from((instruction >> 6) & 0b111);
+                let inmediate_return_flag = (instruction >> 5) & 0b1;
+                if inmediate_return_flag == 1 {
+                    let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
+                    and_inmediate(
+                        self,
+                        destination_register,
+                        source_one_register,
+                        inmediate_value,
+                    )
+                } else {
+                    let source_two_register = Register::from(instruction & 0b111);
+                    and(
+                        self,
+                        destination_register,
+                        source_one_register,
+                        source_two_register,
+                    )
+                }
+            }
+            Instruction::LDR => {
+                let destination_register = Register::from((instruction >> 9) & 0b111);
+                let base_register = Register::from((instruction >> 6) & 0b111);
+                let offset = Self::sign_extend(instruction & 0b111111, 6);
+                load_base_offset(self, destination_register, base_register, offset)
+            }
+            Instruction::STR => {
+                let source_register = Register::from((instruction >> 9) & 0b111);
+                let base_register = Register::from((instruction >> 6) & 0b111);
+                let offset = Self::sign_extend(instruction & 0b111111, 6);
+                store_base_offset(self, source_register, base_register, offset)
+            }
             Instruction::NOT => {
                 let destination_register = Register::from((instruction >> 9) & 0b111);
                 let source_register = Register::from((instruction >> 6) & 0b111);
-                instruction_opcode.not(self, destination_register, source_register)
+                not(self, destination_register, source_register)
             }
-            Instruction::LDI => instruction_opcode.load_indirect(self, instruction),
-            Instruction::STI => instruction_opcode.store_indirect(self, instruction),
-            Instruction::JMP => instruction_opcode.jump(self, instruction),
-            Instruction::LEA => instruction_opcode.load_effective_address(self, instruction),
-            Instruction::TRAP => instruction_opcode.trap(self, instruction),
+            Instruction::LDI => {
+                let destination_register = Register::from((instruction >> 9) & 0b111);
+                let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+                load_indirect(self, destination_register, program_counter_offset)
+            }
+            Instruction::STI => {
+                let source_register = Register::from((instruction >> 9) & 0b111);
+                let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+                store_indirect(self, source_register, program_counter_offset)
+            }
+            Instruction::JMP => {
+                let base_register = Register::from((instruction >> 6) & 0b111);
+                jump(self, base_register)
+            }
+            Instruction::LEA => {
+                let destination_register = Register::from((instruction >> 9) & 0b111);
+                let program_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
+                load_effective_address(self, destination_register, program_counter_offset)
+            }
+            Instruction::TRAP => {
+                let trap = Trap::from(instruction & 0b11111111);
+                trap_instruction(self, trap)
+            }
             Instruction::RTI => panic!("This opcode is not supported"),
             Instruction::RES => panic!("This opcode is not supported"),
         }
