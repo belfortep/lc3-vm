@@ -1,16 +1,4 @@
-use std::io::{Read, Write};
-
 use super::instructions::Instruction;
-
-pub struct Trap;
-impl Trap {
-    pub const GETC: u16 = 0x20;
-    pub const OUT: u16 = 0x21;
-    pub const PUTS: u16 = 0x22;
-    pub const IN: u16 = 0x23;
-    pub const PUTSP: u16 = 0x24;
-    pub const HALT: u16 = 0x25;
-}
 
 struct Flags;
 impl Flags {

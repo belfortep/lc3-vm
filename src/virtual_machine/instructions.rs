@@ -1,6 +1,7 @@
-use std::io::{Read, Write};
-
-use super::lc3_virtual_machine::{LC3VirtualMachine, Register, Trap};
+use super::{
+    lc3_virtual_machine::{LC3VirtualMachine, Register},
+    trap::Trap,
+};
 
 pub enum Instruction {
     BR = 0,
@@ -46,13 +47,6 @@ impl From<u16> for Instruction {
 }
 
 impl Instruction {
-    fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
-        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
-            value_to_extend |= 0xFFFF << ammount_of_bits;
-        }
-        value_to_extend
-    }
-
     fn add(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
         let destination_register = (instruction >> 9) & 0b111;
         let source_one_register = (instruction >> 6) & 0b111;
@@ -142,64 +136,9 @@ impl Instruction {
             Register::R7 as u16,
             virtual_machine.read_register(Register::PROGRAM_COUNTER),
         );
+        let trap = Trap::from(instruction & 0b11111111);
 
-        let trap = instruction & 0b11111111;
-
-        match trap {
-            Trap::GETC => {
-                let mut buffer = [0; 1];
-                std::io::stdin()
-                    .read_exact(&mut buffer)
-                    .expect("Couldn't read from stdin");
-                virtual_machine.update_register(Register::R0 as u16, buffer[0] as u16);
-            }
-            Trap::HALT => {
-                std::process::exit(-1);
-            }
-            Trap::IN => {
-                println!("Enter a character: ");
-                let char = std::io::stdin()
-                    .bytes()
-                    .next()
-                    .and_then(|read_result| read_result.ok())
-                    .map(|char| char as u16)
-                    .unwrap();
-                virtual_machine.update_register(Register::R0 as u16, char);
-            }
-            Trap::OUT => {
-                print!(
-                    "{}",
-                    (virtual_machine.read_register(Register::R0) as u8) as char
-                );
-            }
-            Trap::PUTS => {
-                let mut read_index = virtual_machine.read_register(Register::R0);
-                let mut char = virtual_machine.memory_read(read_index);
-                while char != 0 {
-                    print!("{}", (char as u8) as char);
-                    read_index += 1;
-                    char = virtual_machine.memory_read(read_index);
-                }
-                std::io::stdout().flush().expect("Couldn't flush");
-            }
-            Trap::PUTSP => {
-                let mut read_index = virtual_machine.read_register(Register::R0);
-                let mut char = virtual_machine.memory_read(read_index);
-                while char != 0 {
-                    let first_char = char & 0b11111111;
-                    print!("{}", (first_char as u8) as char);
-                    let second_char = char >> 8;
-                    if second_char != 0 {
-                        print!("{}", (second_char as u8) as char);
-                    }
-                    read_index += 1;
-                    char = virtual_machine.memory_read(read_index);
-                }
-                std::io::stdout().flush().expect("Couldn't flush");
-            }
-
-            _ => panic!("Wrong trap directive"),
-        }
+        trap.execute_trap(virtual_machine);
     }
 
     fn load_base_offset(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
@@ -285,6 +224,13 @@ impl Instruction {
         let base_register_address = virtual_machine.read_register(base_register as usize);
 
         virtual_machine.memory_write(offset + base_register_address, value_to_write)
+    }
+
+    fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
+        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
+            value_to_extend |= 0xFFFF << ammount_of_bits;
+        }
+        value_to_extend
     }
 
     pub fn execute_instruction(&self, virtual_machine: &mut LC3VirtualMachine, instruction: u16) {
