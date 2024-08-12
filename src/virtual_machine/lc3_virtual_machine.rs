@@ -227,11 +227,11 @@ pub mod test {
     #[test]
     fn can_add_two_numbers_in_differents_registers() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_one_to_register_zero = 0b0001000000100001;
-        let add_one_to_register_one = 0b0001001001100001;
+        let add_one_to_register_zero = 0b0001_000_000_1_00001;
+        let add_one_to_register_one = 0b0001_001_001_1_00001;
         virtual_machine.process_input(add_one_to_register_zero);
         virtual_machine.process_input(add_one_to_register_one);
-        let add_register_zero_and_one_in_register_two = 0b0001010000000001;
+        let add_register_zero_and_one_in_register_two = 0b0001_010_000_0_00001;
         virtual_machine.process_input(add_register_zero_and_one_in_register_two);
         let result = virtual_machine.read_register(super::Register::R2);
 
@@ -241,8 +241,8 @@ pub mod test {
     #[test]
     fn can_and_two_numbers_in_same_register() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_max_inmediate_value_to_register_zero = 0b0001000000111111;
-        let and_five_to_register_zero = 0b0101000000100101;
+        let add_max_inmediate_value_to_register_zero = 0b0001_000_000_1_11111;
+        let and_five_to_register_zero = 0b0101_000_000_1_00101;
         virtual_machine.process_input(add_max_inmediate_value_to_register_zero);
         virtual_machine.process_input(and_five_to_register_zero);
         let result = virtual_machine.read_register(super::Register::R0);
@@ -253,11 +253,11 @@ pub mod test {
     #[test]
     fn can_and_two_numbers_in_differents_registers() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_max_inmediate_value_to_register_zero = 0b0001000000111111;
-        let add_five_to_regiser_one = 0b0001001001100101;
+        let add_max_inmediate_value_to_register_zero = 0b0001_000_000_111111;
+        let add_five_to_register_one = 0b0001_001_001_1_00101;
         virtual_machine.process_input(add_max_inmediate_value_to_register_zero);
-        virtual_machine.process_input(add_five_to_regiser_one);
-        let and_register_zero_and_one_in_register_two = 0b0101010000000001;
+        virtual_machine.process_input(add_five_to_register_one);
+        let and_register_zero_and_one_in_register_two = 0b0101_010_000_0_00001;
         virtual_machine.process_input(and_register_zero_and_one_in_register_two);
         let result = virtual_machine.read_register(super::Register::R2);
 
@@ -267,8 +267,8 @@ pub mod test {
     #[test]
     fn can_negate_the_values_of_two_registers() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_five_to_regiser_zero = 0b0001000000100101;
-        virtual_machine.process_input(add_five_to_regiser_zero);
+        let add_five_to_register_zero = 0b0001_000_000_1_00101;
+        virtual_machine.process_input(add_five_to_register_zero);
         let negate_register_zero = 0b1001000000111111;
         virtual_machine.process_input(negate_register_zero);
         let result = virtual_machine.read_register(super::Register::R0);
@@ -279,8 +279,8 @@ pub mod test {
     #[test]
     fn can_branch_if_positive_flag() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_one_to_regiser_zero = 0b0001000000100001;
-        virtual_machine.process_input(add_one_to_regiser_zero);
+        let add_one_to_register_zero = 0b0001000000100001;
+        virtual_machine.process_input(add_one_to_register_zero);
         let branch_positive_flag = 0b0000001000000010;
         virtual_machine.process_input(branch_positive_flag);
 
@@ -294,8 +294,8 @@ pub mod test {
     #[test]
     fn can_branch_if_negative_flag() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_negative_number_to_regiser_zero = 0b0001000000110001;
-        virtual_machine.process_input(add_negative_number_to_regiser_zero);
+        let add_negative_number_to_register_zero = 0b0001000000110001;
+        virtual_machine.process_input(add_negative_number_to_register_zero);
         let branch_negative_flag = 0b0000100000000010;
         virtual_machine.process_input(branch_negative_flag);
 
@@ -309,8 +309,8 @@ pub mod test {
     #[test]
     fn can_branch_if_zero_flag() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_zero_to_regiser_zero = 0b0001000000100000;
-        virtual_machine.process_input(add_zero_to_regiser_zero);
+        let add_zero_to_register_zero = 0b0001000000100000;
+        virtual_machine.process_input(add_zero_to_register_zero);
         let branch_positive_flag = 0b0000010000000010;
         virtual_machine.process_input(branch_positive_flag);
 
@@ -324,8 +324,8 @@ pub mod test {
     #[test]
     fn can_store_and_load_from_memory() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_five_to_regiser_zero = 0b0001000000100101;
-        virtual_machine.process_input(add_five_to_regiser_zero);
+        let add_five_to_register_zero = 0b0001000000100101;
+        virtual_machine.process_input(add_five_to_register_zero);
         let store_register_zero_value_to_memory = 0b0011000000000001;
         virtual_machine.process_input(store_register_zero_value_to_memory);
         let load_value_from_memory_to_register_one = 0b0010001000000001;
@@ -352,10 +352,10 @@ pub mod test {
     #[test]
     fn can_store_and_load_from_memory_with_base_and_offset() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_five_to_regiser_zero = 0b0001000000100101;
-        virtual_machine.process_input(add_five_to_regiser_zero);
-        let add_five_to_regiser_one = 0b0001001001100101;
-        virtual_machine.process_input(add_five_to_regiser_one);
+        let add_five_to_register_zero = 0b0001000000100101;
+        virtual_machine.process_input(add_five_to_register_zero);
+        let add_five_to_register_one = 0b0001001001100101;
+        virtual_machine.process_input(add_five_to_register_one);
 
         let store_register_zero_value_to_memory_from_register_one_and_one_offset =
             0b0111000001000001;
@@ -373,8 +373,8 @@ pub mod test {
     #[test]
     fn can_unconditionally_jumps() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
-        let add_five_to_regiser_zero = 0b0001000000100101;
-        virtual_machine.process_input(add_five_to_regiser_zero);
+        let add_five_to_register_zero = 0b0001000000100101;
+        virtual_machine.process_input(add_five_to_register_zero);
         let unconditionally_jump_to_register_zero_value = 0b1100000000000000;
         virtual_machine.process_input(unconditionally_jump_to_register_zero_value);
 
