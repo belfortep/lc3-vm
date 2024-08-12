@@ -1,49 +1,8 @@
 use std::io::{Read, Write};
 
-pub enum Instruction {
-    BR = 0,
-    ADD,
-    LD,
-    ST,
-    JSR,
-    AND,
-    LDR,
-    STR,
-    RTI,
-    NOT,
-    LDI,
-    STI,
-    JMP,
-    RES,
-    LEA,
-    TRAP,
-}
+use super::instructions::Instruction;
 
-impl From<u16> for Instruction {
-    fn from(value: u16) -> Self {
-        match value {
-            0 => Instruction::BR,
-            1 => Instruction::ADD,
-            2 => Instruction::LD,
-            3 => Instruction::ST,
-            4 => Instruction::JSR,
-            5 => Instruction::AND,
-            6 => Instruction::LDR,
-            7 => Instruction::STR,
-            8 => Instruction::RTI,
-            9 => Instruction::NOT,
-            10 => Instruction::LDI,
-            11 => Instruction::STI,
-            12 => Instruction::JMP,
-            13 => Instruction::RES,
-            14 => Instruction::LEA,
-            15 => Instruction::TRAP,
-            _ => panic!("Wrong Instruction code"),
-        }
-    }
-}
-
-struct Trap;
+pub struct Trap;
 impl Trap {
     pub const GETC: u16 = 0x20;
     pub const OUT: u16 = 0x21;
@@ -60,8 +19,7 @@ impl Flags {
     pub const NEGATIVE: u16 = 1 << 2;
 }
 
-struct Register;
-
+pub struct Register;
 impl Register {
     pub const R0: usize = 0;
     pub const R1: usize = 1;
@@ -91,260 +49,30 @@ impl LC3VirtualMachine {
         }
     }
 
-    fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
-        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
-            value_to_extend |= 0xFFFF << ammount_of_bits;
-        }
-        value_to_extend
-    }
-
-    fn add_instruction(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let source_one_register = (instruction >> 6) & 0b111;
-        let inmediate_return_flag = (instruction >> 5) & 0b1;
-
-        if inmediate_return_flag == 1 {
-            let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
-            let new_register_value = inmediate_value + self.registers[source_one_register as usize];
-            self.registers[destination_register as usize] = new_register_value;
-        } else {
-            let source_two_register = instruction & 0b111;
-            let new_register_value = self.registers[source_one_register as usize]
-                + self.registers[source_two_register as usize];
-            self.registers[destination_register as usize] = new_register_value;
-        }
-
-        self.update_flags(destination_register);
-    }
-
-    fn and_instruction(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let source_one_register = (instruction >> 6) & 0b111;
-        let inmediate_return_flag = (instruction >> 5) & 0b1;
-
-        if inmediate_return_flag == 1 {
-            let inmediate_value = Self::sign_extend(instruction & 0b11111, 5);
-            self.registers[destination_register as usize] =
-                self.registers[source_one_register as usize] & inmediate_value;
-        } else {
-            let source_two_register = instruction & 0b111;
-            self.registers[destination_register as usize] = self.registers
-                [source_one_register as usize]
-                & self.registers[source_two_register as usize];
-        }
-        self.update_flags(destination_register);
-    }
-
-    fn not_instruction(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let source_register = (instruction >> 6) & 0b111;
-
-        self.registers[destination_register as usize] = !self.registers[source_register as usize];
-    }
-
-    fn branch_instruction(&mut self, instruction: u16) {
-        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-        let conditions_flag = (instruction >> 9) & 0b111;
-
-        if (conditions_flag & self.registers[Register::CONDITION_FLAG]) != 0 {
-            let new_programm_counter_value =
-                self.registers[Register::PROGRAM_COUNTER] + programm_counter_offset;
-            self.registers[Register::PROGRAM_COUNTER] = new_programm_counter_value;
-        }
-    }
-    fn memory_read(&mut self, memory_address: u16) -> u16 {
+    pub fn memory_read(&mut self, memory_address: u16) -> u16 {
         self.memory[memory_address as usize]
     }
 
-    fn memory_write(&mut self, memory_address: u16, value_to_write: u16) {
+    pub fn memory_write(&mut self, memory_address: u16, value_to_write: u16) {
         self.memory[memory_address as usize] = value_to_write;
-    }
-
-    fn load(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-
-        let result_value =
-            self.memory_read(self.registers[Register::PROGRAM_COUNTER] + programm_counter_offset);
-
-        self.registers[destination_register as usize] = result_value;
-        self.update_flags(destination_register);
-    }
-
-    fn load_indirect(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-
-        let memory_address =
-            self.memory_read(self.registers[Register::PROGRAM_COUNTER] + programm_counter_offset);
-        self.registers[destination_register as usize] = self.memory_read(memory_address);
-
-        self.update_flags(destination_register);
-    }
-
-    fn load_base_offset(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let base_register = (instruction >> 6) & 0b111;
-        let offset = Self::sign_extend(instruction & 0b111111, 6);
-
-        let register_value = self.registers[base_register as usize];
-        let result_value = self.memory_read(register_value + offset);
-
-        self.registers[destination_register as usize] = result_value;
-        self.update_flags(destination_register);
-    }
-
-    fn load_effective_address(&mut self, instruction: u16) {
-        let destination_register = (instruction >> 9) & 0b111;
-        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-
-        self.registers[destination_register as usize] =
-            self.registers[Register::PROGRAM_COUNTER] + programm_counter_offset;
-
-        self.update_flags(destination_register);
-    }
-
-    fn jump(&mut self, instruction: u16) {
-        let base_register = (instruction >> 6) & 0b111;
-        self.registers[Register::PROGRAM_COUNTER] = self.registers[base_register as usize];
-    }
-
-    fn jump_to_subroutine(&mut self, instruction: u16) {
-        self.registers[Register::R7] = self.registers[Register::PROGRAM_COUNTER];
-
-        let offset_flag = (instruction >> 11) & 0b1;
-
-        if offset_flag == 1 {
-            let programm_counter_offset = Self::sign_extend(instruction & 0b11111111111, 11);
-            let new_programm_counter_value =
-                self.registers[Register::PROGRAM_COUNTER] + programm_counter_offset;
-
-            self.registers[Register::PROGRAM_COUNTER] = new_programm_counter_value;
-        } else {
-            let base_register = (instruction >> 6) & 0b111;
-            self.registers[Register::PROGRAM_COUNTER] = self.registers[base_register as usize];
-        }
-    }
-
-    fn store(&mut self, instruction: u16) {
-        let source_register = (instruction >> 9) & 0b111;
-        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-        let value_to_write = self.registers[source_register as usize];
-        let memory_address = self.registers[Register::PROGRAM_COUNTER] + programm_counter_offset;
-        self.memory_write(memory_address, value_to_write);
-    }
-
-    fn store_indirect(&mut self, instruction: u16) {
-        let source_register = (instruction >> 9) & 0b111;
-        let programm_counter_offset = Self::sign_extend(instruction & 0b111111111, 9);
-        let value_to_write = self.registers[source_register as usize];
-
-        let memory_address =
-            self.memory_read(self.registers[Register::PROGRAM_COUNTER] + programm_counter_offset);
-        let destination_address = self.memory_read(memory_address);
-
-        self.memory_write(destination_address, value_to_write)
-    }
-
-    fn store_base_offset(&mut self, instruction: u16) {
-        let source_register = (instruction >> 9) & 0b111;
-        let base_register = (instruction >> 6) & 0b111;
-        let offset = Self::sign_extend(instruction & 0b111111, 6);
-
-        let value_to_write = self.registers[source_register as usize];
-        let base_register_address = self.registers[base_register as usize];
-
-        self.memory_write(offset + base_register_address, value_to_write)
-    }
-
-    fn trap(&mut self, instruction: u16) {
-        self.registers[Register::R7] = self.registers[Register::PROGRAM_COUNTER];
-
-        let trap = instruction & 0b11111111;
-
-        match trap {
-            Trap::GETC => {
-                let mut buffer = [0; 1];
-                std::io::stdin()
-                    .read_exact(&mut buffer)
-                    .expect("Couldn't read from stdin");
-                self.registers[Register::R0] = buffer[0] as u16;
-            }
-            Trap::HALT => {
-                std::process::exit(-1);
-            }
-            Trap::IN => {
-                println!("Enter a character: ");
-                let char = std::io::stdin()
-                    .bytes()
-                    .next()
-                    .and_then(|read_result| read_result.ok())
-                    .map(|char| char as u16)
-                    .unwrap();
-                self.registers[Register::R0] = char;
-            }
-            Trap::OUT => {
-                print!("{}", (self.registers[Register::R0] as u8) as char);
-            }
-            Trap::PUTS => {
-                let mut read_index = self.registers[Register::R0];
-                let mut char = self.memory_read(read_index);
-                while char != 0 {
-                    print!("{}", (char as u8) as char);
-                    read_index += 1;
-                    char = self.memory_read(read_index);
-                }
-                std::io::stdout().flush().expect("Couldn't flush");
-            }
-            Trap::PUTSP => {
-                let mut read_index = self.registers[Register::R0];
-                let mut char = self.memory_read(read_index);
-                while char != 0 {
-                    let first_char = char & 0b11111111;
-                    print!("{}", (first_char as u8) as char);
-                    let second_char = char >> 8;
-                    if second_char != 0 {
-                        print!("{}", (second_char as u8) as char);
-                    }
-                    read_index += 1;
-                    char = self.memory_read(read_index);
-                }
-                std::io::stdout().flush().expect("Couldn't flush");
-            }
-
-            _ => panic!("Wrong trap directive"),
-        }
     }
 
     pub fn process_input(&mut self, instruction: u16) {
         let instruction_opcode = Instruction::from(instruction >> 12);
-        match instruction_opcode {
-            Instruction::BR => self.branch_instruction(instruction),
-            Instruction::ADD => self.add_instruction(instruction),
-            Instruction::LD => self.load(instruction),
-            Instruction::ST => self.store(instruction),
-            Instruction::JSR => self.jump_to_subroutine(instruction),
-            Instruction::AND => self.and_instruction(instruction),
-            Instruction::LDR => self.load_base_offset(instruction),
-            Instruction::STR => self.store_base_offset(instruction),
-            Instruction::NOT => self.not_instruction(instruction),
-            Instruction::LDI => self.load_indirect(instruction),
-            Instruction::STI => self.store_indirect(instruction),
-            Instruction::JMP => self.jump(instruction),
-            Instruction::LEA => self.load_effective_address(instruction),
-            Instruction::TRAP => self.trap(instruction),
-            Instruction::RTI => panic!("This opcode is not supported"),
-            Instruction::RES => panic!("This opcode is not supported"),
-        }
+        instruction_opcode.execute_instruction(self, instruction);
     }
-    pub fn read_register(&self, register: usize) -> u16 {
-        if register > self.registers.len() {
+    pub fn read_register(&self, source_register: usize) -> u16 {
+        if source_register > self.registers.len() {
             return 0;
         }
-        self.registers[register]
+        self.registers[source_register]
     }
 
-    fn update_flags(&mut self, register: u16) {
+    pub fn update_register(&mut self, destination_register: u16, new_register_value: u16) {
+        self.registers[destination_register as usize] = new_register_value;
+    }
+
+    pub fn update_flags(&mut self, register: u16) {
         let register = register as usize;
         if self.registers[register] == 0 {
             self.registers[Register::CONDITION_FLAG] = Flags::ZERO;
