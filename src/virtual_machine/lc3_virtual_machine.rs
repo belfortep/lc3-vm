@@ -55,19 +55,31 @@ impl LC3VirtualMachine {
         }
     }
 
+    pub fn read_register(&self, source_register: Register) -> u16 {
+        self.registers[source_register as usize]
+    }
+
+    pub fn update_register(&mut self, destination_register: Register, new_register_value: u16) {
+        self.registers[destination_register as usize] = new_register_value;
+    }
+
+    pub fn update_flags(&mut self, register: Register) {
+        let register = register as usize;
+        if self.registers[register] == 0 {
+            self.update_register(Register::ConditionFlag, Flags::ZERO)
+        } else if (self.registers[register] >> 15) != 0 {
+            self.update_register(Register::ConditionFlag, Flags::NEGATIVE)
+        } else {
+            self.update_register(Register::ConditionFlag, Flags::POSITIVE)
+        }
+    }
+
     pub fn memory_read(&mut self, memory_address: u16) -> u16 {
         self.memory[memory_address as usize]
     }
 
     pub fn memory_write(&mut self, memory_address: u16, value_to_write: u16) {
         self.memory[memory_address as usize] = value_to_write;
-    }
-
-    pub fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
-        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
-            value_to_extend |= 0xFFFF << ammount_of_bits;
-        }
-        value_to_extend
     }
 
     pub fn process_input(&mut self, instruction: u16) {
@@ -188,23 +200,12 @@ impl LC3VirtualMachine {
             Instruction::RES => panic!("This opcode is not supported"),
         }
     }
-    pub fn read_register(&self, source_register: Register) -> u16 {
-        self.registers[source_register as usize]
-    }
 
-    pub fn update_register(&mut self, destination_register: Register, new_register_value: u16) {
-        self.registers[destination_register as usize] = new_register_value;
-    }
-
-    pub fn update_flags(&mut self, register: Register) {
-        let register = register as usize;
-        if self.registers[register] == 0 {
-            self.update_register(Register::ConditionFlag, Flags::ZERO)
-        } else if (self.registers[register] >> 15) != 0 {
-            self.update_register(Register::ConditionFlag, Flags::NEGATIVE)
-        } else {
-            self.update_register(Register::ConditionFlag, Flags::POSITIVE)
+    fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
+        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
+            value_to_extend |= 0xFFFF << ammount_of_bits;
         }
+        value_to_extend
     }
 }
 
