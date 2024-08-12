@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use super::{instructions::*, trap::Trap};
 
 const AMMOUNT_OF_REGISTERS: usize = 10;
@@ -6,6 +8,11 @@ impl Flags {
     pub const POSITIVE: u16 = 1 << 0;
     pub const ZERO: u16 = 1 << 1;
     pub const NEGATIVE: u16 = 1 << 2;
+}
+
+enum MemoryMappedRegister {
+    KeyBoardStatusRegister = 0xFE00,
+    KeyBoardDataRegister = 0xFE02,
 }
 
 #[derive(Clone, Copy)]
@@ -74,7 +81,24 @@ impl LC3VirtualMachine {
         }
     }
 
+    fn receive_keyboard_input(&mut self) {
+        let mut buffer = [0; 1];
+        std::io::stdin().read_exact(&mut buffer).unwrap();
+        if buffer[0] != 0 {
+            self.memory_write(MemoryMappedRegister::KeyBoardStatusRegister as u16, 1 << 15);
+            self.memory_write(
+                MemoryMappedRegister::KeyBoardDataRegister as u16,
+                buffer[0] as u16,
+            );
+        } else {
+            self.memory_write(MemoryMappedRegister::KeyBoardStatusRegister as u16, 0)
+        }
+    }
+
     pub fn memory_read(&mut self, memory_address: u16) -> u16 {
+        if memory_address == MemoryMappedRegister::KeyBoardStatusRegister as u16 {
+            self.receive_keyboard_input();
+        }
         self.memory[memory_address as usize]
     }
 
