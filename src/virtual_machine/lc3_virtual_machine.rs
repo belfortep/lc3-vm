@@ -190,6 +190,21 @@ impl LC3VirtualMachine {
         }
     }
 
+    fn next_instruction(&mut self) {
+        let new_register_value = self.read_register(Register::ProgramCounter) + 1;
+        self.update_register(Register::ProgramCounter, new_register_value)
+    }
+
+    pub fn run(&mut self) {
+        loop {
+            let instruction = self.memory_read(self.read_register(Register::ProgramCounter));
+
+            self.next_instruction();
+
+            self.process_input(instruction);
+        }
+    }
+
     fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
         if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
             value_to_extend |= 0xFFFF << ammount_of_bits;

@@ -49,10 +49,10 @@ pub fn add(
     source_one_register: Register,
     source_two_register: Register,
 ) {
-    let new_register_value = virtual_machine.read_register(source_one_register)
-        + virtual_machine.read_register(source_two_register);
+    let new_register_value = virtual_machine.read_register(source_one_register) as u32
+        + virtual_machine.read_register(source_two_register) as u32;
 
-    virtual_machine.update_register(destination_register, new_register_value);
+    virtual_machine.update_register(destination_register, new_register_value as u16);
 
     virtual_machine.update_flags(destination_register);
 }
@@ -63,9 +63,10 @@ pub fn add_inmediate(
     source_one_register: Register,
     inmediate_value: u16,
 ) {
-    let new_register_value = inmediate_value + virtual_machine.read_register(source_one_register);
+    let new_register_value =
+        inmediate_value as u32 + virtual_machine.read_register(source_one_register) as u32;
 
-    virtual_machine.update_register(destination_register, new_register_value);
+    virtual_machine.update_register(destination_register, new_register_value as u16);
     virtual_machine.update_flags(destination_register);
 }
 
@@ -111,9 +112,9 @@ pub fn branch(
     conditions_flag: u16,
 ) {
     if (conditions_flag & virtual_machine.read_register(Register::ConditionFlag)) != 0 {
-        let new_register_value =
-            virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
-        virtual_machine.update_register(Register::ProgramCounter, new_register_value);
+        let new_register_value = virtual_machine.read_register(Register::ProgramCounter) as u32
+            + program_counter_offset as u32;
+        virtual_machine.update_register(Register::ProgramCounter, new_register_value as u16);
     }
 }
 
@@ -212,9 +213,9 @@ pub fn store(
     program_counter_offset: u16,
 ) {
     let value_to_write = virtual_machine.read_register(source_register);
-    let memory_address =
-        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
-    virtual_machine.memory_write(memory_address, value_to_write);
+    let memory_address = virtual_machine.read_register(Register::ProgramCounter) as u32
+        + program_counter_offset as u32;
+    virtual_machine.memory_write(memory_address as u16, value_to_write);
 }
 
 pub fn store_indirect(
@@ -241,6 +242,6 @@ pub fn store_base_offset(
 ) {
     let value_to_write = virtual_machine.read_register(source_register);
     let base_register_address = virtual_machine.read_register(base_register);
-
-    virtual_machine.memory_write(offset + base_register_address, value_to_write)
+    let memory_address = offset as u32 + base_register_address as u32;
+    virtual_machine.memory_write(memory_address as u16, value_to_write)
 }
