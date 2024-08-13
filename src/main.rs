@@ -1,7 +1,6 @@
 use std::{
-    io::{stdin, BufRead, BufReader, Read, Write},
-    net::{TcpListener, TcpStream},
-    thread,
+    io::{stdin, BufRead, BufReader, Write},
+    net::TcpListener,
 };
 
 use byteorder::{BigEndian, ReadBytesExt};
