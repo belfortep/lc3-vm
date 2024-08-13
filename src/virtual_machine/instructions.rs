@@ -75,9 +75,9 @@ pub fn load(
     destination_register: Register,
     program_counter_offset: u16,
 ) {
-    let new_register_value = virtual_machine.memory_read(
-        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset,
-    );
+    let memory_address = virtual_machine.read_register(Register::ProgramCounter) as u32
+        + program_counter_offset as u32;
+    let new_register_value = virtual_machine.memory_read(memory_address as u16);
 
     virtual_machine.update_register(destination_register, new_register_value);
     virtual_machine.update_flags(destination_register);
@@ -201,10 +201,10 @@ pub fn jump_to_subroutine_with_offset(
         virtual_machine.read_register(Register::ProgramCounter),
     );
 
-    let new_register_value =
-        virtual_machine.read_register(Register::ProgramCounter) + program_counter_offset;
+    let new_register_value = virtual_machine.read_register(Register::ProgramCounter) as u32
+        + program_counter_offset as u32;
 
-    virtual_machine.update_register(Register::ProgramCounter, new_register_value);
+    virtual_machine.update_register(Register::ProgramCounter, new_register_value as u16);
 }
 
 pub fn store(
