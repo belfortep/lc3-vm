@@ -79,12 +79,19 @@ pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
         let line = line.map_err(|error| error.to_string())?;
         if line == "r" {
             let registers = virtual_machine.state_of_registers();
-            println!("{}", registers);
+            let registers = registers.split("::");
+            for register in registers {
+                println!("{}", register);
+            }
             continue;
         }
-        let instruction = u16::from_str_radix(&line, 2).map_err(|error| error.to_string())?;
-        virtual_machine.process_input(instruction);
-        println!("instruction proccess: {}", format!("{instruction:#018b}",))
+        match u16::from_str_radix(&line, 2) {
+            Ok(instruction) => {
+                virtual_machine.process_input(instruction);
+                println!("instruction proccess: {}", format!("{instruction:#018b}",))
+            }
+            Err(_) => println!("Wrong instruction format"),
+        }
     }
     Ok(())
 }

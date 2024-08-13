@@ -13,7 +13,10 @@ fn main() -> Result<(), String> {
         reader
             .read_line(&mut response)
             .map_err(|error| error.to_string())?;
-        println!("response: {}", response);
+        let response = response.split("::");
+        for data in response {
+            println!("{}", data);
+        }
     }
 
     Ok(())
