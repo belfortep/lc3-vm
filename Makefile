@@ -1,10 +1,10 @@
 FILE = ./object_files/2048.obj
 
 run:
-	cargo run -- -f $(FILE)
+	cargo run --bin lc3-vm -- -f $(FILE)
 
 interactive:
-	cargo run -- -i
+	cargo run --bin lc3-vm -- -i
 
 debug:
-	cargo run -- -d $(FILE)
+	cargo run --bin lc3-vm -- -d $(FILE)

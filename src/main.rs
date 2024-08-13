@@ -1,4 +1,8 @@
-use std::io::{stdin, BufRead};
+use std::{
+    io::{stdin, BufRead, BufReader, Read, Write},
+    net::{TcpListener, TcpStream},
+    thread,
+};
 
 use byteorder::{BigEndian, ReadBytesExt};
 use lc3_vm::{
@@ -26,6 +30,7 @@ fn main() -> Result<(), String> {
 
         loop {
             virtual_machine.next_instruction();
+            println!("Dale boca");
         }
     }
 
@@ -38,25 +43,45 @@ fn main() -> Result<(), String> {
 
         let mut virtual_machine = LC3VirtualMachine::new(program_counter_start);
         let mut memory_address = program_counter_start;
-        loop {
-            match reader.read_u16::<BigEndian>() {
-                Ok(instruction) => {
-                    virtual_machine.memory_write(memory_address, instruction);
-                    memory_address += 1;
-                }
-                Err(_) => break,
-            }
+        while let Ok(instruction) = reader.read_u16::<BigEndian>() {
+            virtual_machine.memory_write(memory_address, instruction);
+            memory_address += 1;
         }
-        for line in stdin().lock().lines() {
-            let line = line.map_err(|error| error.to_string())?;
-            if line == "n" {
+        let listener = TcpListener::bind("127.0.0.1:3000").unwrap();
+        let (stream, _) = listener.accept().unwrap();
+
+        let mut reader = BufReader::new(&stream);
+
+        loop {
+            let mut command = String::new();
+            reader.read_line(&mut command).unwrap();
+            if command == "\n" {
                 virtual_machine.next_instruction();
-            } else if line == "r" {
-                virtual_machine.print_registers();
+                let memory_address = virtual_machine.read_register(Register::ProgramCounter);
+                let instruction = virtual_machine.memory_read(memory_address);
+                let response = format!("instruction: {instruction:#018b}",);
+                writeln!(&stream, "{}", response).unwrap();
+            } else if command == "r\n" {
+                let response = virtual_machine.print_registers();
+
+                writeln!(&stream, "{}", response).unwrap();
+            } else {
+                let command = command.trim();
+                match command.parse::<u16>() {
+                    Ok(number) => {
+                        for _ in 0..number {
+                            virtual_machine.next_instruction();
+                        }
+                        let response = format!("executed {} instructions", number);
+                        writeln!(&stream, "{}", response).unwrap();
+                    }
+                    Err(_) => {
+                        let response = "Invalid command";
+
+                        writeln!(&stream, "{}", response).unwrap();
+                    }
+                }
             }
-            let memory_address = virtual_machine.read_register(Register::ProgramCounter);
-            let instruction = virtual_machine.memory_read(memory_address);
-            println!("instruction: {}", format!("{instruction:#018b}",))
         }
     }
 

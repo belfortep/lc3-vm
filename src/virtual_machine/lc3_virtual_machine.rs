@@ -199,10 +199,12 @@ impl LC3VirtualMachine {
         self.process_input(instruction);
     }
 
-    pub fn print_registers(&mut self) {
+    pub fn print_registers(&mut self) -> String {
+        let mut registers_information = String::new();
         for register in &self.registers {
-            println!("Register: {}", format!("{register:#018b}"))
+            registers_information.push_str(format!("{register:#018b}::").as_str());
         }
+        registers_information
     }
 
     fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
