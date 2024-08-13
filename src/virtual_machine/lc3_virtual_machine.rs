@@ -199,7 +199,13 @@ impl LC3VirtualMachine {
         self.process_input(instruction);
     }
 
-    pub fn print_registers(&mut self) -> String {
+    pub fn next_instructions(&mut self, ammount_of_instructions: u16) {
+        for _ in 0..ammount_of_instructions {
+            self.next_instruction();
+        }
+    }
+
+    pub fn state_of_registers(&mut self) -> String {
         let mut registers_information = String::new();
         for register in &self.registers {
             registers_information.push_str(format!("{register:#018b}::").as_str());
