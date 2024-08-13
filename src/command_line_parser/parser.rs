@@ -25,16 +25,16 @@ pub fn receive_command_line_arguments() -> Result<ArgMatches, String> {
     Ok(args)
 }
 
-pub fn execute_program_from_file(file: &String) -> Result<(), String> {
-    let reader = receive_file(file.clone())?;
+pub fn execute_program_from_file(file: &str) -> Result<(), String> {
+    let reader = receive_file(file.to_owned())?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
     loop {
         virtual_machine.next_instruction();
     }
 }
 
-pub fn debug_program_from_file(file: &String) -> Result<(), String> {
-    let reader = receive_file(file.clone())?;
+pub fn debug_program_from_file(file: &str) -> Result<(), String> {
+    let reader = receive_file(file.to_owned())?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
     let listener = TcpListener::bind("127.0.0.1:3000").map_err(|error| error.to_string())?;
     let (stream, _) = listener.accept().map_err(|error| error.to_string())?;
@@ -46,7 +46,7 @@ pub fn debug_program_from_file(file: &String) -> Result<(), String> {
             .read_line(&mut command)
             .map_err(|error| error.to_string())?;
         let command = command.trim();
-        if command == "" {
+        if command == "n" {
             virtual_machine.next_instruction();
             let memory_address = virtual_machine.read_register(Register::ProgramCounter);
             let instruction = virtual_machine.memory_read(memory_address);
@@ -63,7 +63,7 @@ pub fn debug_program_from_file(file: &String) -> Result<(), String> {
                     writeln!(&stream, "{}", response).map_err(|error| error.to_string())?;
                 }
                 Err(_) => {
-                    writeln!(&stream, "{}", "Invalid Command").map_err(|error| error.to_string())?
+                    writeln!(&stream, "Invalid Command").map_err(|error| error.to_string())?
                 }
             }
         }
@@ -88,7 +88,8 @@ pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
         match u16::from_str_radix(&line, 2) {
             Ok(instruction) => {
                 virtual_machine.process_input(instruction);
-                println!("instruction proccess: {}", format!("{instruction:#018b}",))
+                let instruction = format!("{instruction:#018b}",);
+                println!("instruction proccess: {}", instruction);
             }
             Err(_) => println!("Wrong instruction format"),
         }
