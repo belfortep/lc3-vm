@@ -4,7 +4,7 @@ run:
 	cargo run -- -f $(FILE)
 
 interactive:
-	cargo run -- -p 
+	cargo run -- -i
 
 debug:
 	cargo run -- -d $(FILE)

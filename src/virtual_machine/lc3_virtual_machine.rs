@@ -199,6 +199,12 @@ impl LC3VirtualMachine {
         self.process_input(instruction);
     }
 
+    pub fn print_registers(&mut self) {
+        for register in &self.registers {
+            println!("Register: {}", format!("{register:#018b}"))
+        }
+    }
+
     fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
         if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
             value_to_extend |= 0xFFFF << ammount_of_bits;
