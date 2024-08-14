@@ -301,7 +301,7 @@ pub mod test {
     }
 
     #[test]
-    fn can_and_two_numbers_in_differents_registers() {
+    fn can_and_two_numbers_in_different_registers() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_max_inmediate_value_to_register_zero = 0b0001_000_000_111111;
         let add_five_to_register_one = 0b0001_001_001_1_00101;
