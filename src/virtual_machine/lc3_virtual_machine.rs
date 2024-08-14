@@ -2,7 +2,7 @@ use std::io::Read;
 
 use super::{instructions::*, register::Register, trap::Trap};
 
-const AMMOUNT_OF_REGISTERS: usize = 10;
+const AMOUNT_OF_REGISTERS: usize = 10;
 pub enum Flag {
     POSITIVE = 1 << 0,
     ZERO = 1 << 1,
