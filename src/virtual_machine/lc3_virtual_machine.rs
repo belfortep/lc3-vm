@@ -2,15 +2,9 @@ use std::io::Read;
 
 use super::{
     instructions::*,
-    register::{Register, AMOUNT_OF_REGISTERS},
+    register::{Register, Registers},
     trap::Trap,
 };
-
-pub enum Flag {
-    POSITIVE = 1 << 0,
-    ZERO = 1 << 1,
-    NEGATIVE = 1 << 2,
-}
 
 enum MemoryMappedRegister {
     KeyBoardStatusRegister = 0xFE00,
@@ -18,37 +12,29 @@ enum MemoryMappedRegister {
 }
 
 pub struct LC3VirtualMachine {
-    registers: Vec<u16>,
+    registers: Registers,
     memory: Vec<u16>,
 }
 
 impl LC3VirtualMachine {
     pub fn new(program_counter_start: u16) -> Self {
-        let mut registers = vec![0; AMOUNT_OF_REGISTERS];
-        registers[Register::ProgramCounter as usize] = program_counter_start;
         Self {
-            registers,
+            registers: Registers::new(program_counter_start),
             memory: vec![0; 1 << 16],
         }
     }
 
     pub fn read_register(&self, source_register: Register) -> u16 {
-        self.registers[source_register as usize]
+        self.registers.read_register(source_register)
     }
 
     pub fn update_register(&mut self, destination_register: Register, new_register_value: u16) {
-        self.registers[destination_register as usize] = new_register_value;
+        self.registers
+            .update_register(destination_register, new_register_value)
     }
 
     pub fn update_flags(&mut self, register: Register) {
-        let register = register as usize;
-        if self.registers[register] == 0 {
-            self.update_register(Register::ConditionFlag, Flag::ZERO as u16)
-        } else if (self.registers[register] >> 15) != 0 {
-            self.update_register(Register::ConditionFlag, Flag::NEGATIVE as u16)
-        } else {
-            self.update_register(Register::ConditionFlag, Flag::POSITIVE as u16)
-        }
+        self.registers.update_flags(register)
     }
 
     fn receive_keyboard_input(&mut self) {

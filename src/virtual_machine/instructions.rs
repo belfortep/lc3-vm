@@ -260,7 +260,7 @@ pub fn store_base_offset(
 
 #[cfg(test)]
 pub mod test {
-    use crate::virtual_machine::lc3_virtual_machine::Flag;
+    use crate::virtual_machine::register::Flag;
 
     use super::LC3VirtualMachine;
 
