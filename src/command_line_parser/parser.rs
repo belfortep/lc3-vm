@@ -10,7 +10,7 @@ use clap::{arg, ArgGroup, ArgMatches, Command};
 use crate::virtual_machine::{lc3_virtual_machine::LC3VirtualMachine, register::Register};
 
 pub fn receive_command_line_arguments() -> Result<ArgMatches, String> {
-    let args = Command::new(" Conway's game of life")
+    let args = Command::new("LC3 Virtual Machine")
         .arg(arg!(-i --interactive "interactive console").required(false))
         .arg(arg!(-f --file <FILE> "file to execute").required(false))
         .arg(arg!(-d --debug <FILE> "debug file").required(false))
@@ -87,7 +87,7 @@ pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
         }
         match u16::from_str_radix(&line, 2) {
             Ok(instruction) => {
-                virtual_machine.process_input(instruction);
+                virtual_machine.decode_instruction(instruction);
                 let instruction = format!("{instruction:#018b}",);
                 println!("instruction proccess: {}", instruction);
             }
