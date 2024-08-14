@@ -1,3 +1,5 @@
+pub const AMOUNT_OF_REGISTERS: usize = 10;
+
 #[derive(Clone, Copy)]
 pub enum Register {
     R0,
