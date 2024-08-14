@@ -2,7 +2,7 @@ use std::io::Read;
 
 use super::{instructions::*, register::Register, trap::Trap};
 
-const AMMOUNT_OF_REGISTERS: usize = 10;
+const AMOUNT_OF_REGISTERS: usize = 10;
 pub enum Flag {
     POSITIVE = 1 << 0,
     ZERO = 1 << 1,
@@ -215,7 +215,7 @@ pub mod test {
     }
 
     #[test]
-    fn can_add_two_numbers_in_differents_registers() {
+    fn can_add_two_numbers_in_different_registers() {
         let mut virtual_machine = LC3VirtualMachine::new(0);
         let add_one_to_register_zero = 0b0001_000_000_1_00001;
         let add_one_to_register_one = 0b0001_001_001_1_00001;
