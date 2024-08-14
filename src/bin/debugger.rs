@@ -3,8 +3,17 @@ use std::{
     net::TcpStream,
 };
 
+fn print_instructions() {
+    println!("Instructions: ");
+    println!("<n> to execute one instruction");
+    println!("<a number> to execute that number of instructions (recommended)");
+    println!("<r> to print the state of the registers of the program");
+    println!("remember to use the program you are debugging if it needs user input");
+}
+
 fn main() -> Result<(), String> {
     let stream = TcpStream::connect("127.0.0.1:3000").map_err(|error| error.to_string())?;
+    print_instructions();
     let mut reader = BufReader::new(&stream);
     for line in stdin().lock().lines() {
         let line = line.map_err(|error| error.to_string())?;

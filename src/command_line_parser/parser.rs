@@ -33,10 +33,16 @@ pub fn execute_program_from_file(file: &str) -> Result<(), String> {
     }
 }
 
+fn print_instructions_for_debugger(file: &str) {
+    println!("Starting debugging of the program {}", file);
+    println!("Remember to open the debugger from another terminal with cargo run --bin debugger");
+}
+
 pub fn debug_program_from_file(file: &str) -> Result<(), String> {
     let reader = receive_file(file.to_owned())?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
     let listener = TcpListener::bind("127.0.0.1:3000").map_err(|error| error.to_string())?;
+    print_instructions_for_debugger(file);
     let (stream, _) = listener.accept().map_err(|error| error.to_string())?;
     let mut reader = BufReader::new(&stream);
 
@@ -70,10 +76,18 @@ pub fn debug_program_from_file(file: &str) -> Result<(), String> {
     }
 }
 
+fn print_instructions_for_interactive_console() {
+    println!("Starting interactive console");
+    println!("Instructions: ");
+    println!("<r> to print the state of the registers at the moment");
+    println!("<an instruction in binary> to instantly execute that instruction");
+}
+
 pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
     let program_counter_start = 0x3000;
 
     let mut virtual_machine = LC3VirtualMachine::new(program_counter_start);
+    print_instructions_for_interactive_console();
 
     for line in stdin().lock().lines() {
         let line = line.map_err(|error| error.to_string())?;
