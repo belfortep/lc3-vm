@@ -53,7 +53,7 @@ pub fn add(
         .read_register(source_one_register)
         .wrapping_add(virtual_machine.read_register(source_two_register));
 
-    virtual_machine.update_register(destination_register, new_register_value as u16);
+    virtual_machine.update_register(destination_register, new_register_value);
 
     virtual_machine.update_flags(destination_register);
 }
@@ -68,7 +68,7 @@ pub fn add_inmediate(
         .read_register(source_one_register)
         .wrapping_add(inmediate_value);
 
-    virtual_machine.update_register(destination_register, new_register_value as u16);
+    virtual_machine.update_register(destination_register, new_register_value);
     virtual_machine.update_flags(destination_register);
 }
 
@@ -213,7 +213,7 @@ pub fn jump_to_subroutine_with_offset(
         .read_register(Register::ProgramCounter)
         .wrapping_add(program_counter_offset);
 
-    virtual_machine.update_register(Register::ProgramCounter, new_register_value as u16);
+    virtual_machine.update_register(Register::ProgramCounter, new_register_value);
 }
 
 pub fn store(

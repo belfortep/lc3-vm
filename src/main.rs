@@ -9,7 +9,7 @@ fn disable_input_buffering() -> Result<(), String> {
 
     termios.c_lflag &= !ICANON & !ECHO;
 
-    tcsetattr(0, TCSANOW, &mut termios).map_err(|error| error.to_string())?;
+    tcsetattr(0, TCSANOW, &termios).map_err(|error| error.to_string())?;
 
     Ok(())
 }
