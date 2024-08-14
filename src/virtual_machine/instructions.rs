@@ -257,3 +257,190 @@ pub fn store_base_offset(
 
     virtual_machine.memory_write(base_register_address.wrapping_add(offset), value_to_write)
 }
+
+#[cfg(test)]
+pub mod test {
+    use crate::virtual_machine::lc3_virtual_machine::Flag;
+
+    use super::LC3VirtualMachine;
+
+    #[test]
+    fn can_add_two_numbers_in_same_register() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_one_to_register_zero = 0b0001_000_000_1_00001;
+        virtual_machine.decode_instruction(add_one_to_register_zero);
+        let result = virtual_machine.read_register(super::Register::R0);
+
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn can_add_two_numbers_in_different_registers() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_one_to_register_zero = 0b0001_000_000_1_00001;
+        let add_one_to_register_one = 0b0001_001_001_1_00001;
+        virtual_machine.decode_instruction(add_one_to_register_zero);
+        virtual_machine.decode_instruction(add_one_to_register_one);
+        let add_register_zero_and_one_in_register_two = 0b0001_010_000_0_00001;
+        virtual_machine.decode_instruction(add_register_zero_and_one_in_register_two);
+        let result = virtual_machine.read_register(super::Register::R2);
+
+        assert_eq!(result, 2);
+    }
+
+    #[test]
+    fn can_and_two_numbers_in_same_register() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_max_inmediate_value_to_register_zero = 0b0001_000_000_1_11111;
+        let and_five_to_register_zero = 0b0101_000_000_1_00101;
+        virtual_machine.decode_instruction(add_max_inmediate_value_to_register_zero);
+        virtual_machine.decode_instruction(and_five_to_register_zero);
+        let result = virtual_machine.read_register(super::Register::R0);
+
+        assert_eq!(result, 0b00101);
+    }
+
+    #[test]
+    fn can_and_two_numbers_in_differents_registers() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_max_inmediate_value_to_register_zero = 0b0001_000_000_111111;
+        let add_five_to_register_one = 0b0001_001_001_1_00101;
+        virtual_machine.decode_instruction(add_max_inmediate_value_to_register_zero);
+        virtual_machine.decode_instruction(add_five_to_register_one);
+        let and_register_zero_and_one_in_register_two = 0b0101_010_000_0_00001;
+        virtual_machine.decode_instruction(and_register_zero_and_one_in_register_two);
+        let result = virtual_machine.read_register(super::Register::R2);
+
+        assert_eq!(result, 0b00101);
+    }
+
+    #[test]
+    fn can_negate_the_values_of_two_registers() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_five_to_register_zero = 0b0001_000_000_1_00101;
+        virtual_machine.decode_instruction(add_five_to_register_zero);
+        let negate_register_zero = 0b1001_000_000_1_11111;
+        virtual_machine.decode_instruction(negate_register_zero);
+        let result = virtual_machine.read_register(super::Register::R0);
+
+        assert_eq!(result, 0b1111111111111010);
+    }
+
+    #[test]
+    fn can_branch_if_positive_flag() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_one_to_register_zero = 0b0001_000_000_1_00001;
+        virtual_machine.decode_instruction(add_one_to_register_zero);
+        let branch_positive_flag = 0b0000_0_0_1_000000010;
+        virtual_machine.decode_instruction(branch_positive_flag);
+
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
+        assert_eq!(result, Flag::POSITIVE as u16);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b10);
+    }
+
+    #[test]
+    fn can_branch_if_negative_flag() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_negative_number_to_register_zero = 0b0001_000_000_110001;
+        virtual_machine.decode_instruction(add_negative_number_to_register_zero);
+        let branch_negative_flag = 0b0000_1_0_0_000000010;
+        virtual_machine.decode_instruction(branch_negative_flag);
+
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
+        assert_eq!(result, Flag::NEGATIVE as u16);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b10);
+    }
+
+    #[test]
+    fn can_branch_if_zero_flag() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_zero_to_register_zero = 0b0001_000_000_100000;
+        virtual_machine.decode_instruction(add_zero_to_register_zero);
+        let branch_zero_flag = 0b0000_0_1_0_000000010;
+        virtual_machine.decode_instruction(branch_zero_flag);
+
+        let result = virtual_machine.read_register(super::Register::ConditionFlag);
+        assert_eq!(result, Flag::ZERO as u16);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b10);
+    }
+
+    #[test]
+    fn can_store_and_load_from_memory() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_five_to_register_zero = 0b0001_000_000_1_00101;
+        virtual_machine.decode_instruction(add_five_to_register_zero);
+        let store_register_zero_value_to_memory = 0b0011_000_000000001;
+        virtual_machine.decode_instruction(store_register_zero_value_to_memory);
+        let load_value_from_memory_to_register_one = 0b0010_001_000000001;
+        virtual_machine.decode_instruction(load_value_from_memory_to_register_one);
+
+        let result = virtual_machine.read_register(super::Register::R1);
+        assert_eq!(result, 0b101);
+    }
+
+    #[test]
+    fn can_jump_to_subroutine_and_return_with_register_seven() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let jump_to_position_four = 0b0100_1_00000000100;
+        virtual_machine.decode_instruction(jump_to_position_four);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b100);
+        let jump_to_register_zero = 0b0100_0_00_000_000000;
+        virtual_machine.decode_instruction(jump_to_register_zero);
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn can_store_and_load_from_memory_with_base_and_offset() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_five_to_register_zero = 0b0001_000_000_1_00101;
+        virtual_machine.decode_instruction(add_five_to_register_zero);
+        let add_five_to_register_one = 0b0001_001_001_1_00101;
+        virtual_machine.decode_instruction(add_five_to_register_one);
+
+        let store_register_zero_value_to_memory_from_register_one_and_one_offset =
+            0b0111_000_001_000001;
+        virtual_machine.decode_instruction(
+            store_register_zero_value_to_memory_from_register_one_and_one_offset,
+        );
+        let load_value_from_memory_from_register_one_and_one_offset_to_register_two =
+            0b0110_010_001_000001;
+        virtual_machine.decode_instruction(
+            load_value_from_memory_from_register_one_and_one_offset_to_register_two,
+        );
+
+        let result = virtual_machine.read_register(super::Register::R2);
+        assert_eq!(result, 0b101);
+    }
+
+    #[test]
+    fn can_unconditionally_jumps() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let add_five_to_register_zero = 0b0001_000_000_1_00101;
+        virtual_machine.decode_instruction(add_five_to_register_zero);
+        let unconditionally_jump_to_register_zero_value = 0b1100_000_000_000000;
+        virtual_machine.decode_instruction(unconditionally_jump_to_register_zero_value);
+
+        let result = virtual_machine.read_register(super::Register::ProgramCounter);
+        assert_eq!(result, 0b101);
+    }
+
+    #[test]
+    fn can_load_effective_address() {
+        let mut virtual_machine = LC3VirtualMachine::new(0);
+        let load_effective_address_three_to_register_zero = 0b1110_000_000000011;
+        virtual_machine.decode_instruction(load_effective_address_three_to_register_zero);
+
+        let result = virtual_machine.read_register(super::Register::R0);
+        assert_eq!(result, 0b11);
+    }
+}
