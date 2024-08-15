@@ -13,10 +13,11 @@ struct TermiosWrapper {
 }
 
 impl TermiosWrapper {
-    pub fn new(mut termios: Termios) -> Result<Self, String> {
-        termios.c_lflag &= !ICANON & !ECHO;
+    pub fn new(termios: Termios) -> Result<Self, String> {
+        let mut new_termios = termios;
+        new_termios.c_lflag &= !ICANON & !ECHO;
 
-        tcsetattr(STDIN, TCSANOW, &termios).map_err(|error| error.to_string())?;
+        tcsetattr(STDIN, TCSANOW, &new_termios).map_err(|error| error.to_string())?;
         Ok(Self { termios })
     }
 }
