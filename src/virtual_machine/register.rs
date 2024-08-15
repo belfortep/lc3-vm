@@ -50,13 +50,10 @@ impl Registers {
     }
 
     pub fn state_of_registers(&mut self) -> String {
-        let mut registers_information = String::new();
-
-        for register in &self.registers {
-            registers_information.push_str(format!("{register:#018b}::").as_str());
-        }
-
-        registers_information
+        self.registers
+            .iter()
+            .map(|register| format!("{register:#018b}::"))
+            .collect::<String>()
     }
 }
 
