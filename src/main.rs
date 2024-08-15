@@ -17,9 +17,8 @@ fn disable_input_buffering() -> Result<(), String> {
 fn main() -> Result<(), String> {
     let args = receive_command_line_arguments()?;
 
-    disable_input_buffering()?;
-
     if let Some(file) = args.get_one::<String>("file") {
+        disable_input_buffering()?;
         execute_program_from_file(file)?;
     }
 
