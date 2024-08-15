@@ -2,8 +2,8 @@ use std::{
     io::{stdin, BufRead, BufReader, Write},
     net::TcpStream,
 };
-const LOCAL_HOST: &str = "127.0.0.1";
-const PORT: &str = "3000";
+
+use lc3_vm::constants::{LOCAL_HOST, PORT, STREAM_DATA_SEPARATOR};
 
 fn print_instructions() {
     println!("Instructions: ");
@@ -25,7 +25,7 @@ fn main() -> Result<(), String> {
         connection_reader
             .read_line(&mut response)
             .map_err(|error| error.to_string())?;
-        let response = response.split("::");
+        let response = response.split(STREAM_DATA_SEPARATOR);
         for data in response {
             println!("{}", data);
         }
