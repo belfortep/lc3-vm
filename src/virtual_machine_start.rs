@@ -8,10 +8,11 @@ use std::{
     fs::File,
     io::{stdin, BufRead, BufReader, Write},
     net::TcpListener,
+    path::Path,
 };
 
 pub fn execute_program_from_file(file: &str) -> Result<(), String> {
-    let reader = receive_file(file.to_owned())?;
+    let reader = receive_file(file)?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
     loop {
         virtual_machine.next_instruction();
@@ -24,7 +25,7 @@ fn print_instructions_for_debugger(file: &str) {
 }
 
 pub fn debug_program_from_file(file: &str) -> Result<(), String> {
-    let reader = receive_file(file.to_owned())?;
+    let reader = receive_file(file)?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
     let listening_address = format!("{}:{}", LOCAL_HOST, PORT);
     let listener = TcpListener::bind(listening_address).map_err(|error| error.to_string())?;
@@ -99,8 +100,8 @@ pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
     Ok(())
 }
 
-fn receive_file(arg: impl AsRef<Path>) -> Result<BufReader<File>, String> {
-    let file = File::open(arg).map_err(|error| error.to_string())?;
+fn receive_file(path: impl AsRef<Path>) -> Result<BufReader<File>, String> {
+    let file = File::open(path).map_err(|error| error.to_string())?;
     let file_reader = BufReader::new(file);
     Ok(file_reader)
 }

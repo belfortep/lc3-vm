@@ -189,7 +189,7 @@ impl LC3VirtualMachine {
     }
 
     pub fn next_instructions(&mut self, steps: u16) {
-        for _ in 0..amount_of_instructions {
+        for _ in 0..steps {
             self.next_instruction();
         }
     }
