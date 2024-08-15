@@ -37,7 +37,7 @@ impl Trap {
     }
 
     fn halt(&self) {
-        std::process::exit(-1);
+        std::process::exit(0);
     }
 
     fn in_trap(&self, virtual_machine: &mut LC3VirtualMachine) {
