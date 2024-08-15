@@ -1,6 +1,8 @@
-use lc3_vm::command_line_parser::parser::{
-    debug_program_from_file, execute_program_from_file, execute_vm_in_interactive_mode,
-    receive_command_line_arguments,
+use lc3_vm::{
+    command_line_parser::parser::receive_command_line_arguments,
+    virtual_machine_start::{
+        debug_program_from_file, execute_program_from_file, execute_vm_in_interactive_mode,
+    },
 };
 use termios::{tcsetattr, Termios, ECHO, ICANON, TCSANOW};
 
