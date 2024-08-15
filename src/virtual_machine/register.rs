@@ -52,8 +52,10 @@ impl Registers {
     pub fn state_of_registers(&mut self) -> String {
         self.registers
             .iter()
-            .map(|register| format!("{register:#018b}::"))
-            .collect::<String>()
+            .fold(String::new(), |mut accumulator, register| {
+                accumulator.push_str(format!("{register:#018b}::").as_str());
+                accumulator
+            })
     }
 }
 
