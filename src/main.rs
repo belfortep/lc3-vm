@@ -6,21 +6,30 @@ use lc3_vm::{
 };
 use termios::{tcsetattr, Termios, ECHO, ICANON, TCSANOW};
 
-fn disable_input_buffering() -> Result<(), String> {
-    let mut termios = Termios::from_fd(0).map_err(|error| error.to_string())?;
+struct TermiosWrapper {
+    termios: Termios,
+}
 
-    termios.c_lflag &= !ICANON & !ECHO;
+impl TermiosWrapper {
+    pub fn new(mut termios: Termios) -> Result<Self, String> {
+        termios.c_lflag &= !ICANON & !ECHO;
 
-    tcsetattr(0, TCSANOW, &termios).map_err(|error| error.to_string())?;
+        tcsetattr(0, TCSANOW, &termios).map_err(|error| error.to_string())?;
+        Ok(Self { termios })
+    }
+}
 
-    Ok(())
+impl Drop for TermiosWrapper {
+    fn drop(&mut self) {
+        tcsetattr(0, TCSANOW, &self.termios).expect("Couldn't return terminal to normal");
+    }
 }
 
 fn main() -> Result<(), String> {
     let args = receive_command_line_arguments()?;
-
     if let Some(file) = args.get_one::<String>("file") {
-        disable_input_buffering()?;
+        let termios = Termios::from_fd(0).map_err(|error| error.to_string())?;
+        TermiosWrapper::new(termios)?;
         execute_program_from_file(file)?;
     }
 
