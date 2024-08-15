@@ -188,8 +188,8 @@ impl LC3VirtualMachine {
         self.decode_instruction(instruction);
     }
 
-    pub fn next_instructions(&mut self, ammount_of_instructions: u16) {
-        for _ in 0..ammount_of_instructions {
+    pub fn next_instructions(&mut self, amount_of_instructions: u16) {
+        for _ in 0..amount_of_instructions {
             self.next_instruction();
         }
     }
