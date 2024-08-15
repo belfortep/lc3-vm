@@ -13,12 +13,15 @@ struct TermiosWrapper {
 }
 
 impl TermiosWrapper {
-    pub fn new(termios: Termios) -> Result<Self, String> {
+    pub fn new() -> Result<Self, String> {
+        let termios = Termios::from_fd(STDIN).map_err(|error| error.to_string())?;
         let mut new_termios = termios;
         new_termios.c_lflag &= !ICANON & !ECHO;
 
         tcsetattr(STDIN, TCSANOW, &new_termios).map_err(|error| error.to_string())?;
-        Ok(Self { termios })
+        Ok(Self {
+            termios: new_termios,
+        })
     }
 }
 
@@ -31,8 +34,7 @@ impl Drop for TermiosWrapper {
 fn main() -> Result<(), String> {
     let args = receive_command_line_arguments()?;
     if let Some(file) = args.get_one::<String>("file") {
-        let termios = Termios::from_fd(STDIN).map_err(|error| error.to_string())?;
-        TermiosWrapper::new(termios)?;
+        TermiosWrapper::new()?;
         execute_program_from_file(file)?;
     }
 
