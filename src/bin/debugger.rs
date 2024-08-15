@@ -1,9 +1,9 @@
 use std::{
     io::{stdin, BufRead, BufReader, Write},
-    net::TcpStream,
+    os::unix::net::UnixStream,
 };
 
-use lc3_vm::constants::{LOCAL_HOST, PORT, STREAM_DATA_SEPARATOR};
+use lc3_vm::constants::{CONNECTION_PATH, STREAM_DATA_SEPARATOR};
 
 fn print_instructions() {
     println!("Instructions: ");
@@ -14,8 +14,7 @@ fn print_instructions() {
 }
 
 fn main() -> Result<(), String> {
-    let connection_address = format!("{}:{}", LOCAL_HOST, PORT);
-    let stream = TcpStream::connect(connection_address).map_err(|error| error.to_string())?;
+    let stream = UnixStream::connect(CONNECTION_PATH).map_err(|error| error.to_string())?;
     print_instructions();
     let mut connection_reader = BufReader::new(&stream);
     for line in stdin().lock().lines() {

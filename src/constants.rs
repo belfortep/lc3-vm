@@ -1,3 +1,2 @@
-pub const LOCAL_HOST: &str = "127.0.0.1";
-pub const PORT: &str = "3000";
+pub const CONNECTION_PATH: &str = "/tmp/debugger.sock";
 pub const STREAM_DATA_SEPARATOR: &str = "::";

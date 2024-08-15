@@ -1,5 +1,5 @@
 use crate::{
-    constants::{LOCAL_HOST, PORT, STREAM_DATA_SEPARATOR},
+    constants::{CONNECTION_PATH, STREAM_DATA_SEPARATOR},
     virtual_machine::{lc3_virtual_machine::LC3VirtualMachine, register::Register},
 };
 use byteorder::{BigEndian, ReadBytesExt};
@@ -7,7 +7,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use std::{
     fs::File,
     io::{stdin, BufRead, BufReader, Write},
-    net::TcpListener,
+    os::unix::net::UnixListener,
     path::Path,
 };
 
@@ -27,8 +27,7 @@ fn print_instructions_for_debugger(file: &str) {
 pub fn debug_program_from_file(file: &str) -> Result<(), String> {
     let reader = receive_file(file)?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
-    let listening_address = format!("{}:{}", LOCAL_HOST, PORT);
-    let listener = TcpListener::bind(listening_address).map_err(|error| error.to_string())?;
+    let listener = UnixListener::bind(CONNECTION_PATH).map_err(|error| error.to_string())?;
     print_instructions_for_debugger(file);
     let (stream, _) = listener.accept().map_err(|error| error.to_string())?;
     let mut connection_reader = BufReader::new(&stream);
