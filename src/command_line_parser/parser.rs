@@ -96,21 +96,22 @@ pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
     print_instructions_for_interactive_console();
     for line in stdin().lock().lines() {
         let line = line.map_err(|error| error.to_string())?;
-        if line == "r" {
-            let registers = virtual_machine.state_of_registers();
-            let registers = registers.split(STREAM_DATA_SEPARATOR);
-            for register in registers {
-                println!("{}", register);
+        match line.as_str() {
+            "r" => {
+                let registers = virtual_machine.state_of_registers();
+                let registers = registers.split(STREAM_DATA_SEPARATOR);
+                for register in registers {
+                    println!("{}", register);
+                }
             }
-            continue;
-        }
-        match u16::from_str_radix(&line, 2) {
-            Ok(instruction) => {
-                virtual_machine.decode_instruction(instruction);
-                let instruction = format!("{instruction:#018b}",);
-                println!("instruction proccess: {}", instruction);
-            }
-            Err(_) => println!("Wrong instruction format"),
+            _ => match u16::from_str_radix(&line, 2) {
+                Ok(instruction) => {
+                    virtual_machine.decode_instruction(instruction);
+                    let instruction = format!("{instruction:#018b}",);
+                    println!("instruction proccess: {}", instruction);
+                }
+                Err(_) => println!("Wrong instruction format"),
+            },
         }
     }
     Ok(())
