@@ -99,7 +99,7 @@ pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
     Ok(())
 }
 
-fn receive_file(arg: String) -> Result<BufReader<File>, String> {
+fn receive_file(arg: impl AsRef<Path>) -> Result<BufReader<File>, String> {
     let file = File::open(arg).map_err(|error| error.to_string())?;
     let file_reader = BufReader::new(file);
     Ok(file_reader)
