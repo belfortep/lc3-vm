@@ -188,8 +188,8 @@ impl LC3VirtualMachine {
         self.decode_instruction(instruction);
     }
 
-    pub fn next_instructions(&mut self, ammount_of_instructions: u16) {
-        for _ in 0..ammount_of_instructions {
+    pub fn next_instructions(&mut self, amount_of_instructions: u16) {
+        for _ in 0..amount_of_instructions {
             self.next_instruction();
         }
     }
@@ -198,9 +198,9 @@ impl LC3VirtualMachine {
         self.registers.state_of_registers()
     }
 
-    fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
-        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
-            value_to_extend |= 0xFFFF << ammount_of_bits;
+    fn sign_extend(mut value_to_extend: u16, amount_of_bits: u16) -> u16 {
+        if (value_to_extend >> (amount_of_bits - 1) & 0b1) == 1 {
+            value_to_extend |= 0xFFFF << amount_of_bits;
         }
         value_to_extend
     }

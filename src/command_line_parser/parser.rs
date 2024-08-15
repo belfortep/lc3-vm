@@ -70,9 +70,9 @@ pub fn debug_program_from_file(file: &str) -> Result<(), String> {
                 writeln!(&stream, "{}", response).map_err(|error| error.to_string())?;
             }
             _ => match command.parse::<u16>() {
-                Ok(ammount_of_instructions) => {
-                    virtual_machine.next_instructions(ammount_of_instructions);
-                    let response = format!("executed {} instructions", ammount_of_instructions);
+                Ok(amount_of_instructions) => {
+                    virtual_machine.next_instructions(amount_of_instructions);
+                    let response = format!("executed {} instructions", amount_of_instructions);
                     writeln!(&stream, "{}", response).map_err(|error| error.to_string())?;
                 }
                 Err(_) => {

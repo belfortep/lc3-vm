@@ -8,5 +8,5 @@ Implementation of lc3-vm in Rust
 
 ### Debugger Controls
 - "n" to pass one instruction and see the instruction executed on the debugger
-- "Any u16 number" to pass that ammount of instructions (for example, just type 10000 to pass 10000 instructions forward, recommended for the `2048.obj`)
+- "Any u16 number" to execute that amount of instructions (for example, just type 10000 to pass 10000 instructions forward, recommended for the `2048.obj`)
 - "r" to see the state of the registers
