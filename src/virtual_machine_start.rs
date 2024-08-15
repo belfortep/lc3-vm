@@ -128,7 +128,7 @@ fn load_reader_file_to_vm_memory(mut reader: BufReader<File>) -> Result<LC3Virtu
     let mut memory_address = program_counter_start;
     while let Ok(instruction) = reader.read_u16::<BigEndian>() {
         virtual_machine.memory_write(memory_address, instruction);
-        memory_address += 1;
+        memory_address = memory_address.wrapping_add(1);
     }
     Ok(virtual_machine)
 }
