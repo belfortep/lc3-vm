@@ -38,7 +38,7 @@ pub fn execute_program_from_file(file: &str) -> Result<(), String> {
 
 fn print_instructions_for_debugger(file: &str) {
     println!("Starting debugging of the program {}", file);
-    println!("Remember to open the debugger from another terminal with cargo run --bin debugger");
+    println!("Remember to open the debugger from another terminal with make debugger or cargo run --bin debugger");
 }
 
 pub fn debug_program_from_file(file: &str) -> Result<(), String> {

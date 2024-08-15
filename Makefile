@@ -8,3 +8,6 @@ interactive:
 
 debug:
 	cargo run --bin lc3-vm -- -d $(FILE)
+
+debugger:
+	cargo run --bin debugger
