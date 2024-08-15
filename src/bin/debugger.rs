@@ -1,9 +1,9 @@
 use std::{
-    io::{stdin, BufRead, BufReader, Write},
-    os::unix::net::UnixStream,
+    io::{stdin, BufRead},
+    os::unix::net::UnixDatagram,
 };
 
-use lc3_vm::constants::{CONNECTION_PATH, STREAM_DATA_SEPARATOR};
+use lc3_vm::constants::{CLIENT_PATH, SERVER_PATH, STREAM_DATA_SEPARATOR};
 
 fn print_instructions() {
     println!("Instructions: ");
@@ -14,19 +14,25 @@ fn print_instructions() {
 }
 
 fn main() -> Result<(), String> {
-    let stream = UnixStream::connect(CONNECTION_PATH).map_err(|error| error.to_string())?;
+    let socket = UnixDatagram::bind(CLIENT_PATH).map_err(|error| error.to_string())?;
     print_instructions();
-    let mut connection_reader = BufReader::new(&stream);
     for line in stdin().lock().lines() {
         let line = line.map_err(|error| error.to_string())?;
-        writeln!(&stream, "{}", line).map_err(|error| error.to_string())?;
-        let mut response = String::new();
-        connection_reader
-            .read_line(&mut response)
+        socket
+            .send_to(line.as_bytes(), SERVER_PATH)
             .map_err(|error| error.to_string())?;
-        let response = response.split(STREAM_DATA_SEPARATOR);
-        for data in response {
-            println!("{}", data);
+        let mut buffer = [0; 1024];
+        match socket.recv(&mut buffer) {
+            Ok(size) => {
+                let response = String::from_utf8_lossy(&buffer[..size]);
+                let response = response.split(STREAM_DATA_SEPARATOR);
+                for data in response {
+                    println!("{}", data);
+                }
+            }
+            Err(_) => {
+                println!("Couldn't receive");
+            }
         }
     }
 
