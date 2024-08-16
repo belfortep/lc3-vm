@@ -39,7 +39,9 @@ impl LC3VirtualMachine {
 
     fn receive_keyboard_input(&mut self) {
         let mut buffer = [0; 1];
-        std::io::stdin().read_exact(&mut buffer).unwrap();
+        std::io::stdin()
+            .read_exact(&mut buffer)
+            .expect("Couldn't read from stdin");
         if buffer[0] != 0 {
             self.memory_write(MemoryMappedRegister::KeyBoardStatusRegister as u16, 1 << 15);
             self.memory_write(

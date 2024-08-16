@@ -10,3 +10,6 @@ Implementation of lc3-vm in Rust
 - "n" to pass one instruction and see the instruction executed on the debugger
 - "Any u16 number" to execute that amount of instructions (for example, just type 10000 to pass 10000 instructions forward, recommended for the `2048.obj`)
 - "r" to see the state of the registers
+
+### Recommendation
+If you try the debugger, it will generate a .socket file in your /tmp/ folder. You will need to remove them if you use the debugger more than once. Try using `ls /tmp/*socket` and after that execute the `rm /tmp/*socket` command
