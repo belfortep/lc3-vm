@@ -5,7 +5,7 @@ use crate::{
 use byteorder::{BigEndian, ReadBytesExt};
 
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{stdin, BufRead, BufReader},
     os::unix::net::UnixDatagram,
     path::Path,
@@ -27,6 +27,7 @@ fn print_instructions_for_debugger(file: &str) {
 pub fn debug_program_from_file(file: &str) -> Result<(), String> {
     let reader = receive_file(file)?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
+    let _ = fs::remove_file(SERVER_PATH);
     let socket: UnixDatagram =
         UnixDatagram::bind(SERVER_PATH).map_err(|error| error.to_string())?;
     print_instructions_for_debugger(file);

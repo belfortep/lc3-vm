@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{stdin, BufRead},
     os::unix::net::UnixDatagram,
 };
@@ -14,6 +15,7 @@ fn print_instructions() {
 }
 
 fn main() -> Result<(), String> {
+    let _ = fs::remove_file(CLIENT_PATH);
     let socket = UnixDatagram::bind(CLIENT_PATH).map_err(|error| error.to_string())?;
     print_instructions();
     for line in stdin().lock().lines() {
