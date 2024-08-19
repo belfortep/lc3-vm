@@ -1,9 +1,8 @@
-use lc3_vm::{
-    command_line_parser::parser::receive_command_line_arguments,
-    virtual_machine_start::{
-        debug_program_from_file, execute_program_from_file, execute_vm_in_interactive_mode,
-    },
+use lc3_vm::virtual_machine_start::{
+    debug_program_from_file, execute_program_from_file, execute_vm_in_interactive_mode,
 };
+
+use clap::{arg, ArgGroup, ArgMatches, Command};
 use termios::{tcsetattr, Termios, ECHO, ICANON, TCSANOW};
 
 const STDIN: i32 = 0;
@@ -29,6 +28,22 @@ impl Drop for TermiosWrapper {
     fn drop(&mut self) {
         tcsetattr(STDIN, TCSANOW, &self.termios).expect("Couldn't return terminal to normal");
     }
+}
+
+pub fn receive_command_line_arguments() -> Result<ArgMatches, String> {
+    let args = Command::new("LC3 Virtual Machine")
+        .arg(arg!(-i --interactive "interactive console").required(false))
+        .arg(arg!(-f --file <FILE> "file to execute").required(false))
+        .arg(arg!(-d --debug <FILE> "debug file").required(false))
+        .group(
+            ArgGroup::new("run program")
+                .args(["interactive", "file", "debug"])
+                .required(false),
+        )
+        .after_help("Don't use -i, -f or -d at the same time")
+        .get_matches();
+
+    Ok(args)
 }
 
 fn main() -> Result<(), String> {
