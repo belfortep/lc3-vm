@@ -38,7 +38,7 @@ impl From<u16> for Instruction {
             13 => Instruction::RES,
             14 => Instruction::LEA,
             15 => Instruction::TRAP,
-            _ => panic!("Wrong Instruction code"),
+            _ => unreachable!("This should never happen"),
         }
     }
 }

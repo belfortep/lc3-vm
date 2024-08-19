@@ -39,7 +39,9 @@ impl LC3VirtualMachine {
 
     fn receive_keyboard_input(&mut self) {
         let mut buffer = [0; 1];
-        std::io::stdin().read_exact(&mut buffer).unwrap();
+        std::io::stdin()
+            .read_exact(&mut buffer)
+            .expect("Couldn't read from stdin");
         if buffer[0] != 0 {
             self.memory_write(MemoryMappedRegister::KeyBoardStatusRegister as u16, 1 << 15);
             self.memory_write(
@@ -188,9 +190,19 @@ impl LC3VirtualMachine {
         self.decode_instruction(instruction);
     }
 
-    fn sign_extend(mut value_to_extend: u16, ammount_of_bits: u16) -> u16 {
-        if (value_to_extend >> (ammount_of_bits - 1) & 0b1) == 1 {
-            value_to_extend |= 0xFFFF << ammount_of_bits;
+    pub fn next_instructions(&mut self, steps: u16) {
+        for _ in 0..steps {
+            self.next_instruction();
+        }
+    }
+
+    pub fn state_of_registers(&mut self) -> String {
+        self.registers.to_string()
+    }
+
+    fn sign_extend(mut value_to_extend: u16, amount_of_bits: u16) -> u16 {
+        if (value_to_extend >> (amount_of_bits - 1) & 0b1) == 1 {
+            value_to_extend |= 0xFFFF << amount_of_bits;
         }
         value_to_extend
     }

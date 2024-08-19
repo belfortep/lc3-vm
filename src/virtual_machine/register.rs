@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 pub const AMOUNT_OF_REGISTERS: usize = 10;
 
 pub enum Flag {
@@ -47,6 +49,18 @@ impl Registers {
         } else {
             self.update_register(Register::ConditionFlag, Flag::POSITIVE as u16)
         }
+    }
+}
+
+impl Display for Registers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let registers = self
+            .registers
+            .iter()
+            .fold(String::new(), |accumulator, register| {
+                accumulator + &format!("{register:#018b}::")
+            });
+        write!(f, "{}", registers)
     }
 }
 

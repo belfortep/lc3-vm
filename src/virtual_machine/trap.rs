@@ -37,7 +37,7 @@ impl Trap {
     }
 
     fn halt(&self) {
-        std::process::exit(-1);
+        std::process::exit(0);
     }
 
     fn in_trap(&self, virtual_machine: &mut LC3VirtualMachine) {
@@ -47,7 +47,7 @@ impl Trap {
             .next()
             .and_then(|read_result| read_result.ok())
             .map(|char| char as u16)
-            .unwrap();
+            .expect("Couldn't read from stdin");
         virtual_machine.update_register(Register::R0, char);
     }
 
