@@ -1,47 +1,20 @@
 use super::{lc3_virtual_machine::LC3VirtualMachine, register::Register, trap::Trap};
-
-pub enum Instruction {
-    BR = 0,
-    ADD,
-    LD,
-    ST,
-    JSR,
-    AND,
-    LDR,
-    STR,
-    RTI,
-    NOT,
-    LDI,
-    STI,
-    JMP,
-    RES,
-    LEA,
-    TRAP,
-}
-
-impl From<u16> for Instruction {
-    fn from(value: u16) -> Self {
-        match value {
-            0 => Instruction::BR,
-            1 => Instruction::ADD,
-            2 => Instruction::LD,
-            3 => Instruction::ST,
-            4 => Instruction::JSR,
-            5 => Instruction::AND,
-            6 => Instruction::LDR,
-            7 => Instruction::STR,
-            8 => Instruction::RTI,
-            9 => Instruction::NOT,
-            10 => Instruction::LDI,
-            11 => Instruction::STI,
-            12 => Instruction::JMP,
-            13 => Instruction::RES,
-            14 => Instruction::LEA,
-            15 => Instruction::TRAP,
-            _ => unreachable!("This should never happen"),
-        }
-    }
-}
+pub const BR: u16 = 0b0000;
+pub const ADD: u16 = 0b0001;
+pub const LD: u16 = 0b0010;
+pub const ST: u16 = 0b0011;
+pub const JSR: u16 = 0b0100;
+pub const AND: u16 = 0b0101;
+pub const LDR: u16 = 0b0110;
+pub const STR: u16 = 0b0111;
+pub const RTI: u16 = 0b1000;
+pub const NOT: u16 = 0b1001;
+pub const LDI: u16 = 0b1010;
+pub const STI: u16 = 0b1011;
+pub const JMP: u16 = 0b1100;
+pub const RES: u16 = 0b1101;
+pub const LEA: u16 = 0b1110;
+pub const TRAP: u16 = 0b1111;
 
 pub fn add(
     virtual_machine: &mut LC3VirtualMachine,
