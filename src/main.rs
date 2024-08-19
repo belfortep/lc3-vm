@@ -1,3 +1,5 @@
+use std::io::Error;
+
 use lc3_vm::virtual_machine_start::{
     debug_program_from_file, execute_program_from_file, execute_vm_in_interactive_mode,
 };
@@ -12,12 +14,12 @@ struct TermiosWrapper {
 }
 
 impl TermiosWrapper {
-    pub fn new() -> Result<Self, String> {
-        let termios = Termios::from_fd(STDIN).map_err(|error| error.to_string())?;
+    pub fn new() -> Result<Self, Error> {
+        let termios = Termios::from_fd(STDIN)?;
         let mut new_termios = termios;
         new_termios.c_lflag &= !ICANON & !ECHO;
 
-        tcsetattr(STDIN, TCSANOW, &new_termios).map_err(|error| error.to_string())?;
+        tcsetattr(STDIN, TCSANOW, &new_termios)?;
         Ok(Self {
             termios: new_termios,
         })
@@ -30,7 +32,7 @@ impl Drop for TermiosWrapper {
     }
 }
 
-pub fn receive_command_line_arguments() -> Result<ArgMatches, String> {
+pub fn receive_command_line_arguments() -> ArgMatches {
     let args = Command::new("LC3 Virtual Machine")
         .arg(arg!(-i --interactive "interactive console").required(false))
         .arg(arg!(-f --file <FILE> "file to execute").required(false))
@@ -43,11 +45,11 @@ pub fn receive_command_line_arguments() -> Result<ArgMatches, String> {
         .after_help("Don't use -i, -f or -d at the same time")
         .get_matches();
 
-    Ok(args)
+    args
 }
 
-fn main() -> Result<(), String> {
-    let args = receive_command_line_arguments()?;
+fn main() -> Result<(), Error> {
+    let args = receive_command_line_arguments();
     if let Some(file) = args.get_one::<String>("file") {
         TermiosWrapper::new()?;
         execute_program_from_file(file)?;

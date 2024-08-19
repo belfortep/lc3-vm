@@ -6,12 +6,12 @@ use byteorder::{BigEndian, ReadBytesExt};
 
 use std::{
     fs::{self, File},
-    io::{stdin, BufRead, BufReader},
+    io::{stdin, BufRead, BufReader, Error},
     os::unix::net::UnixDatagram,
     path::Path,
 };
 
-pub fn execute_program_from_file(file: &str) -> Result<(), String> {
+pub fn execute_program_from_file(file: &str) -> Result<(), Error> {
     let reader = receive_file(file)?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
     loop {
@@ -24,12 +24,11 @@ fn print_instructions_for_debugger(file: &str) {
     println!("Remember to open the debugger from another terminal with make debugger or cargo run --bin debugger");
 }
 
-pub fn debug_program_from_file(file: &str) -> Result<(), String> {
+pub fn debug_program_from_file(file: &str) -> Result<(), Error> {
     let reader = receive_file(file)?;
     let mut virtual_machine = load_reader_file_to_vm_memory(reader)?;
     let _ = fs::remove_file(SERVER_PATH);
-    let socket: UnixDatagram =
-        UnixDatagram::bind(SERVER_PATH).map_err(|error| error.to_string())?;
+    let socket: UnixDatagram = UnixDatagram::bind(SERVER_PATH)?;
     print_instructions_for_debugger(file);
     loop {
         let mut buffer = [0; 1024];
@@ -44,37 +43,27 @@ pub fn debug_program_from_file(file: &str) -> Result<(), String> {
                             virtual_machine.read_register(Register::ProgramCounter);
                         let instruction = virtual_machine.memory_read(memory_address);
                         let response = format!("instruction: {instruction:#018b}",);
-                        socket
-                            .send_to_addr(response.as_bytes(), &addr)
-                            .map_err(|error| error.to_string())?;
+                        socket.send_to_addr(response.as_bytes(), &addr)?;
                     }
                     "r" => {
                         let response = virtual_machine.state_of_registers();
-                        socket
-                            .send_to_addr(response.as_bytes(), &addr)
-                            .map_err(|error| error.to_string())?;
+                        socket.send_to_addr(response.as_bytes(), &addr)?;
                     }
                     _ => match command.parse::<u16>() {
                         Ok(amount_of_instructions) => {
                             virtual_machine.next_instructions(amount_of_instructions);
                             let response =
                                 format!("executed {} instructions", amount_of_instructions);
-                            socket
-                                .send_to_addr(response.as_bytes(), &addr)
-                                .map_err(|error| error.to_string())?;
+                            socket.send_to_addr(response.as_bytes(), &addr)?;
                         }
                         Err(_) => {
-                            socket
-                                .send_to_addr("Invalid Command".as_bytes(), &addr)
-                                .map_err(|error| error.to_string())?;
+                            socket.send_to_addr("Invalid Command".as_bytes(), &addr)?;
                         }
                     },
                 }
             }
             Err(_) => {
-                socket
-                    .send_to("Couldn't receive error".as_bytes(), CLIENT_PATH)
-                    .map_err(|error| error.to_string())?;
+                socket.send_to("Couldn't receive error".as_bytes(), CLIENT_PATH)?;
             }
         }
     }
@@ -87,12 +76,12 @@ fn print_instructions_for_interactive_console() {
     println!("<an instruction in binary> to instantly execute that instruction");
 }
 
-pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
+pub fn execute_vm_in_interactive_mode() -> Result<(), Error> {
     let program_counter_start = 0x3000;
     let mut virtual_machine = LC3VirtualMachine::new(program_counter_start);
     print_instructions_for_interactive_console();
     for line in stdin().lock().lines() {
-        let line = line.map_err(|error| error.to_string())?;
+        let line = line?;
         match line.as_str() {
             "r" => {
                 let registers = virtual_machine.state_of_registers();
@@ -114,16 +103,14 @@ pub fn execute_vm_in_interactive_mode() -> Result<(), String> {
     Ok(())
 }
 
-fn receive_file(path: impl AsRef<Path>) -> Result<BufReader<File>, String> {
-    let file = File::open(path).map_err(|error| error.to_string())?;
+fn receive_file(path: impl AsRef<Path>) -> Result<BufReader<File>, Error> {
+    let file = File::open(path)?;
     let file_reader = BufReader::new(file);
     Ok(file_reader)
 }
 
-fn load_reader_file_to_vm_memory(mut reader: BufReader<File>) -> Result<LC3VirtualMachine, String> {
-    let program_counter_start = reader
-        .read_u16::<BigEndian>()
-        .map_err(|error| error.to_string())?;
+fn load_reader_file_to_vm_memory(mut reader: BufReader<File>) -> Result<LC3VirtualMachine, Error> {
+    let program_counter_start = reader.read_u16::<BigEndian>()?;
 
     let mut virtual_machine = LC3VirtualMachine::new(program_counter_start);
     let mut memory_address = program_counter_start;
