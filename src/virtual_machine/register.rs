@@ -48,8 +48,10 @@ impl Registers {
             self.update_register(Register::ConditionFlag, Flag::POSITIVE as u16)
         }
     }
+}
 
-    pub fn state_of_registers(&mut self) -> String {
+impl ToString for Registers {
+    fn to_string(&self) -> String {
         self.registers
             .iter()
             .fold(String::new(), |accumulator, register| {

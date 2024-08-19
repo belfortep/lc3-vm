@@ -197,7 +197,7 @@ impl LC3VirtualMachine {
     }
 
     pub fn state_of_registers(&mut self) -> String {
-        self.registers.state_of_registers()
+        self.registers.to_string()
     }
 
     fn sign_extend(mut value_to_extend: u16, amount_of_bits: u16) -> u16 {
