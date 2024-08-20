@@ -1,5 +1,5 @@
 use crate::{
-    constants::{CLIENT_PATH, SERVER_PATH, STREAM_DATA_SEPARATOR},
+    constants::{CLIENT_PATH, DEFAULT_PROGRAM_COUNTER_START, SERVER_PATH, STREAM_DATA_SEPARATOR},
     virtual_machine::{lc3_virtual_machine::LC3VirtualMachine, register::Register},
 };
 use byteorder::{BigEndian, ReadBytesExt};
@@ -77,8 +77,7 @@ fn print_instructions_for_interactive_console() {
 }
 
 pub fn execute_vm_in_interactive_mode() -> Result<(), Error> {
-    let program_counter_start = 0x3000;
-    let mut virtual_machine = LC3VirtualMachine::new(program_counter_start);
+    let mut virtual_machine = LC3VirtualMachine::new(DEFAULT_PROGRAM_COUNTER_START);
     print_instructions_for_interactive_console();
     for line in stdin().lock().lines() {
         let line = line?;
