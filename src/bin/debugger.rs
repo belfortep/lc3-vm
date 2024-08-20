@@ -1,6 +1,6 @@
 use std::{
     fs,
-    io::{stdin, BufRead},
+    io::{stdin, BufRead, Error},
     os::unix::net::UnixDatagram,
 };
 
@@ -14,15 +14,13 @@ fn print_instructions() {
     println!("remember to use the program you are debugging if it needs user input");
 }
 
-fn main() -> Result<(), String> {
+fn main() -> Result<(), Error> {
     let _ = fs::remove_file(CLIENT_PATH);
-    let socket = UnixDatagram::bind(CLIENT_PATH).map_err(|error| error.to_string())?;
+    let socket = UnixDatagram::bind(CLIENT_PATH)?;
     print_instructions();
     for line in stdin().lock().lines() {
-        let line = line.map_err(|error| error.to_string())?;
-        socket
-            .send_to(line.as_bytes(), SERVER_PATH)
-            .map_err(|error| error.to_string())?;
+        let line = line?;
+        socket.send_to(line.as_bytes(), SERVER_PATH)?;
         let mut buffer = [0; 1024];
         match socket.recv(&mut buffer) {
             Ok(size) => {
