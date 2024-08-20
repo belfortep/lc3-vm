@@ -33,7 +33,7 @@ impl Drop for TermiosWrapper {
 }
 
 pub fn receive_command_line_arguments() -> ArgMatches {
-    let args = Command::new("LC3 Virtual Machine")
+    Command::new("LC3 Virtual Machine")
         .arg(arg!(-i --interactive "interactive console").required(false))
         .arg(arg!(-f --file <FILE> "file to execute").required(false))
         .arg(arg!(-d --debug <FILE> "debug file").required(false))
@@ -43,9 +43,7 @@ pub fn receive_command_line_arguments() -> ArgMatches {
                 .required(false),
         )
         .after_help("Don't use -i, -f or -d at the same time")
-        .get_matches();
-
-    args
+        .get_matches()
 }
 
 fn main() -> Result<(), Error> {
