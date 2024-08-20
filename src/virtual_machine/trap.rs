@@ -75,7 +75,7 @@ fn puts(virtual_machine: &mut LC3VirtualMachine) {
     let mut char = virtual_machine.memory_read(read_index);
     while char != 0 {
         print!("{}", (char as u8) as char);
-        read_index += 1;
+        read_index = read_index.wrapping_add(1);
         char = virtual_machine.memory_read(read_index);
     }
     std::io::stdout().flush().expect("Couldn't flush");
